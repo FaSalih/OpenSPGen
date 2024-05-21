@@ -15,5 +15,5 @@ Open source sigma profile generator
    ```
 5. Run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz).
 
-* Note: Because the DFT software used in this package is only available for Linux and macOS distributions, the complete tool can only be run and should be installed on those machines. 
+*Note: Because the DFT software used in this package is only available for Linux and macOS distributions, the complete tool can only be run and should be installed on those machines. 
 
