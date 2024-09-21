@@ -29,7 +29,7 @@ import shutil
 
 # Specific
 import numpy
-# from tqdm import tqdm
+from tqdm import tqdm
 
 # Local
 from . import spGenerator as sp

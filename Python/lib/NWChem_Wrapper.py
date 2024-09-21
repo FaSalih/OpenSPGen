@@ -11,6 +11,7 @@ Sections
         . runNWChem()
         . readCOSMO()
         . readOutput()
+        . checkConvergence()
         . generateFinalXYZ()
         . generateLastStep()
     
@@ -255,6 +256,54 @@ def readOutput(outputPath,doCOSMO=True):
     # Output
     return surfaceArea,segmentAreas,atomCoords
 
+def checkConvergence(outputPath,logPath):
+    ''' 
+    checkConvergence() checks if the optimization converged by reading the 
+    output file of NWChem.
+    Arguments:
+        outputPath : string
+            Path to the output file of NWChem.
+    Returns:
+        converged : bool
+            True if the optimization converged, False otherwise.
+    '''
+    # Open output file
+    with open(outputPath,'r') as file:
+        # Find last occurrence of "Optimization converged"
+        lastOptimLine=findLastOccurrence(file,['Optimization','converged'])
+        # Check if any "optimization converged" lines were found
+        if lastOptimLine is not None:
+            # Find last occurrence of "-cosmo- solvent"
+            lastCosmoLine=findLastOccurrence(file,['-cosmo-','solvent'])
+            # Check that the last successful optimization is after cosmo ended
+            if lastOptimLine > lastCosmoLine:
+                converged=True
+            else:
+                converged=False
+                # find error message
+                lastErrorLine=findLastOccurrence(file,['failed','termination'])
+                # add error message after last cosmo iteration to logfile
+                with open(logPath,'a') as logFile:
+                    logFile.write('\nNWChem convergence not reached with COSMO,' 
+                                  + ' only geometry optimization in vacuum succeeded...')
+                    logFile.write('NWChem Error message: ')
+                    goToLine(file,lastCosmoLine)
+                    for line in file:
+                        logFile.write(line)
+        else:
+            converged=False
+            # find error message
+            lastErrorLine=findLastOccurrence(file,['failed','termination'])
+            # add error message to logfile
+            with open(logPath,'a') as logFile:
+                logFile.write('\nNWChem convergence not reached (neither in vacuum nor in the COSMO solvation medium)...')
+                logFile.write('NWChem Error message: ')
+                goToLine(file,lastErrorLine)
+                for line in file:
+                    logFile.write(line)
+    # Output
+    return converged
+
 def generateFinalXYZ(atomCoordsList,xyzPath):
     """
     generateFinalXYZ() generates an XYZ file using the information contained
@@ -388,6 +437,8 @@ def findLastOccurrence(file,targetLineSplit):
     file.seek(0)
     # Initiate line counter
     lineNum=0
+    # Initiate variables
+    lastOccurrenceLine=None
     # Read file line by line
     for line in file:
         # Split line
@@ -400,7 +451,44 @@ def findLastOccurrence(file,targetLineSplit):
         lineNum+=1
     # Output
     return lastOccurrenceLine
-        
+
+def findAllOccurrences(file,targetLineSplit):     
+    """
+    findAllOccurrences() finds the line number of all occurrences of a line
+    in a file.
+
+    Parameters
+    ----------
+    file : _io.TextIOWrapper object
+        File of interest.
+    targetLineSplit : list of strings
+        Desired target line, inputted as a list of splits (ex. obtained using
+        line.split()).
+    Returns
+    -------
+    findAllOccurrences : list of int
+        Number of the lines where targetLineSplit occurs.
+
+    """
+    # Rewind file
+    file.seek(0)
+    # Initiate line counter
+    lineNum=0
+    # Initialize list of occurrences
+    allOccurrenceLines=[]
+    # Read file line by line
+    for line in file:
+        # Split line
+        lineSplit=line.split()
+        # Check if split is the target split
+        if lineSplit==targetLineSplit:
+            # Update line number of last occurrence
+            allOccurrenceLines.append(lineNum)
+        # Update line number
+        lineNum+=1
+    # Output
+    return allOccurrenceLines
+
 def goToLine(file,lineNumber):
     """
     goToLine() places the pointer of file at the line with number "lineNumber"

@@ -5,8 +5,6 @@ consistent conformers for molecules (i.e., conformers with maximal surface area
 and minimal intramolecular interactions). The main function, 
 generateConformer(), contains the essential details of the algorithm.
 
-Copied from RDKit_Wrapper_13.py
-
 Sections
     . Imports
     
@@ -25,8 +23,8 @@ Sections
         . isHB()
         . getNeighborsTree()
 
-Last edit: 2024-05-20
-Author: Dinis Abranches, Fathya Salih
+Last edit: 2022-04-09
+Author: Dinis Abranches
 """
 
 # =============================================================================
@@ -44,8 +42,6 @@ import warnings
 # Specific
 import numpy as np
 import pandas as pd
-# from tqdm import tqdm
-# import imageio
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import rdForceFieldHelpers as rdff
@@ -161,7 +157,39 @@ def generateConformer(smilesString,repulsion_params=None,xyzPath=None,calc_energ
         return molecule,energies[eDiff.index(min(eDiff))],sasa
     else:
         return molecule
-        
+   
+def moleculeFromMol2(mol2Path, xyzPath=None):
+    """
+    moleculeFromMol2() generates a molecule object from a mol2 file.
+    This allows pre-optimizing a provided geometry using a standard MMFF
+    force field.
+
+    Parameters
+    ----------
+    mol2Path : string
+        Path to the mol2 file.
+    xyzPath : string, optional
+        Path where the xyz file of the conformer should be saved. If none, 
+        no xyz file is saved.
+        The default is None.
+
+    Returns
+    -------
+    molecule : rdkit.Chem.rdchem.Mol object
+        Molecule object of interest.
+
+    """
+    # Read mol2 file
+    molecule=Chem.MolFromMol2File(mol2Path)
+    # Add hydrogens to molecule object
+    molecule=AllChem.AddHs(molecule)
+    # Optimize molecule using standard MMFF
+    AllChem.MMFFOptimizeMolecule(molecule)
+    # If an XYZ file is requested, save XYZ file
+    if xyzPath is not None: Chem.MolToXYZFile(molecule,xyzPath)
+    # Output
+    return molecule
+
 # =============================================================================
 # Auxiliary Functions
 # =============================================================================
@@ -192,7 +220,7 @@ def getInitialConformer(smilesString,randomSeed=42,xyzPath=None):
     molecule=AllChem.AddHs(molecule)
     # Generate initial 3D structure of the molecule
     AllChem.EmbedMolecule(molecule,randomSeed=randomSeed)
-    # Minimizie initial guess with MMFF
+    # Minimize initial guess with MMFF
     AllChem.MMFFOptimizeMolecule(molecule)
     # If an XYZ file is requested, save XYZ file
     if xyzPath is not None: Chem.MolToXYZFile(molecule,xyzPath)

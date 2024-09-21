@@ -1,0 +1,10 @@
+test-rebinning-all.sh
+test-rebinning-all.py
+test-averaging-all.py
+test-averaging-all.sh
+combine_all_sps_diff_rav.py
+sub-tests.sh
+7.2
+
+Python/Parameter Optimization - Recent versions/
+Python/lib/__pycache__/*

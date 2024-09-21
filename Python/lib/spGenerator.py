@@ -43,9 +43,7 @@ from rdkit import Chem
 from rdkit.Chem import rdmolops
 
 # Local
-# from lib import RDKit_Wrapper_12 as rdk
-# from lib import RDKit_Wrapper_12_s as rdk   # seeded initial conformer generation
-from lib import RDKit_Wrapper_13 as rdk   # seeded initial conformer generation
+from lib import RDKit_Wrapper as rdk   # seeded initial conformer generation
 from lib import NWChem_Wrapper as nwc
 
 # =============================================================================
@@ -58,11 +56,12 @@ def generateSP(identifier,jobFolder,np,configFile,
                initialXYZ=None,
                randomSeed=42,
                cleanOutput=True,
+               removeNWOutput=True,
                generateFinalXYZ=True,
                generateOutputSummary=True,
                doCOSMO=True,
                avgRadius=0.5,
-               sigmaBins=[-0.035,0.035,0.001]):
+               sigmaBins=[-0.100,0.100,0.001]):
     """
     generateSP() is the main function of the workflow developed to generate
     consistent sigma profiles. Given an identifier of a molecule, this function
@@ -100,7 +99,6 @@ def generateSP(identifier,jobFolder,np,configFile,
             . 'CAS Number'
             . 'InChI'
             . 'InChIKey'
-            . 'xyz'
         The default is 'SMILES'.
     charge : int or None, optional
         Charge of the molecule/ion. If None, crossCheck() and RDKit_Wrapper are
@@ -114,7 +112,9 @@ def generateSP(identifier,jobFolder,np,configFile,
         The default is None.
     cleanOutput : boolean, optional
         Whether to remove unnecessary output NWCHem files from the job folder,
-        including the main log file.
+        The default is True.
+    removeNWOutput : boolean, optional
+        Whether to remove the main log file from the job folder.
         The default is True.
     generateFinalXYZ : boolean, optional
         Whether to generate an xyz file with the final structure of the
@@ -150,25 +150,23 @@ def generateSP(identifier,jobFolder,np,configFile,
     """
     # Initialize warning
     warning=None
-    # If charge or initialXYZ are not provided, retrieve mol info
+    # If charge or initialXYZ are not provided, retrieve mol SMILES string
     if charge is None or initialXYZ in [None, 'Random']:
-    # if charge is None or initialXYZ is None:
-        # If identifier is a CAS number, InChI or InChIKey, obtain a SMILES string
-        if identifierType in ['CAS Number','InChI','InChIKey']: 
+        # If identifier is not a SMILES string, obtain a SMILES string
+        if identifierType.upper() not in ['SMILES', 'MOL2']: 
             smilesString,warning=crossCheck(identifier,identifierType)
         else:
             smilesString=identifier
     # Create path to initial conformer for the molecule
     xyzPath=os.path.join(jobFolder,'initialGeometry.xyz')
-    if initialXYZ is None: # Call RDKit_Wrapper
+    if identifierType.upper()=='MOL2': # generate a pre-optimized version of the provided geometry
+        molecule=rdk.moleculeFromMol2(identifier,xyzPath=xyzPath)
+    elif initialXYZ is None: # generate an algorithm-selected conformer
         molecule=rdk.generateConformer(smilesString,xyzPath=xyzPath)
-        print('\nrdk.generateConformer passed\n')
-    elif initialXYZ == 'Random':
+    elif initialXYZ == 'Random': # generate a random conformer
         molecule=rdk.getInitialConformer(smilesString,randomSeed=randomSeed,xyzPath=xyzPath)
-        print('\nrdk.getInitialConformer passed\n')
     else: # Copy supplied xyz file to job folder as initialGeometry.xyz
         shutil.copy2(initialXYZ,xyzPath)
-        print('\nan initialXYZ was given\n')
     # Get formal charge of molecule
     if charge is None: charge=rdmolops.GetFormalCharge(molecule); print('\ngiven charge was none\n')
     # Use job folder name as job name
@@ -176,34 +174,36 @@ def generateSP(identifier,jobFolder,np,configFile,
     # Generate NWChem input script
     inputPath=os.path.join(jobFolder,'input.nw')
     nwc.buildInputFile(inputPath,configFile,xyzPath,name,charge)
-    print('\nnwc.buildInputFile passed\n')
     # Run NWChem
     nwc.runNWChem(inputPath,jobFolder,np)
-    print('\nnwc.runNWChem passed\n')
+    # Check that nwchem job converged
+    outputPath=os.path.join(jobFolder,'output.nw')
+    logPath=os.path.join(jobFolder,'..','job.log')
+    converged=nwc.checkConvergence(outputPath,logPath)
+    if not converged: 
+        print('NWChem job did not converge. The full output.nw file will be returned...')
+        removeNWOutput=False
     # Read cosmo.xyz
     if doCOSMO:
         cosmoPath=os.path.join(jobFolder,name+'.cosmo.xyz')
         segmentCoordinates,segmentCharges=nwc.readCOSMO(cosmoPath)
-        print('\nnwc.readCOSMO passed\n')
     # Read output file
-    outputPath=os.path.join(jobFolder,'output.nw')
     surfaceArea,segmentAreas,atomCoords=nwc.readOutput(outputPath,doCOSMO)
-    print('\nnwc.readOutput passed\n')
     # Generate final XYZ
     if generateFinalXYZ: 
         nwc.generateFinalXYZ(atomCoords,
                              os.path.join(jobFolder,'finalGeometry.xyz'))
-        print('\nnwc.generateFinalXYZ passed\n')
     
     # Generate output summary
     if generateOutputSummary: 
         nwc.generateLastStep(outputPath,
                              os.path.join(jobFolder,'outputSummary.nw'))
-        print('\nnwc.generateLastStep passed\n')
     # Clean output
     if cleanOutput:
         for file in glob.glob(os.path.join(jobFolder,name+'*')):
             if 'cosmo' not in file: os.remove(file)
+    # Remove NWChem log file
+    if removeNWOutput:
         os.remove(os.path.join(jobFolder,'output.nw'))
     # Do COSMO
     if doCOSMO:
@@ -213,7 +213,6 @@ def generateSP(identifier,jobFolder,np,configFile,
                                                   segmentAreas,
                                                   surfaceArea,
                                                   avgRadius=avgRadius)  
-        print('\ngetSigmaMatrix passed\n')         
         # Write non-averaged sigmaMatrix
         spPath=os.path.join(jobFolder,'sigmaSurface.csv')
         numpy.savetxt(spPath,
@@ -221,7 +220,6 @@ def generateSP(identifier,jobFolder,np,configFile,
                       delimiter=',')        
         # Get Sigma Profile
         sigma,sigmaProfile=getSigmaProfile(avgSigmaMatrix,sigmaBins)
-        print('\ngetSigmaProfile passed\n')
         # Write Sigma Profile
         spPath=os.path.join(jobFolder,'sigmaProfile.csv')
         numpy.savetxt(spPath,
@@ -530,6 +528,15 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
             . Column 4 - area of surface segment (Angs^2)
             . Column 5 - charge density of segment (e/Angs^2)
 
+    avgSigmaMatrix : numpy.ndarray of floats
+        Matrix containing sigma surface information, with column 5 recalculated
+        using the averaging algorithm:
+            . Column 0 - x coordinate of point charge (Angs)
+            . Column 1 - y coordinate of point charge (Angs)
+            . Column 2 - z coordinate of point charge (Angs)
+            . Column 3 - charge of point charge (e)
+            . Column 4 - area of surface segment (Angs^2)
+            . Column 5 - charge density of segment (e/Angs^2)
     """
     # Get total number of segments
     nSeg=len(segmentCharges)
@@ -564,7 +571,7 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
     if avgRadius is not None:
         avgSigmaMatrix=averagingAlgorithm(sigmaMatrix,avgRadius)
     else:
-        avgSigmaMatrix=averagingAlgorithm
+        avgSigmaMatrix=sigmaMatrix
     # Output
     return sigmaMatrix,avgSigmaMatrix
 
