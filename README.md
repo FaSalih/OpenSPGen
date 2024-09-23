@@ -45,4 +45,4 @@ An example usage file is provided in `run-sp-job.sh`.
 
 ### Additional Usage Notes
 
-- It is not recommended to generate large molecules or structures with large cycles without a starting initial geometry. All identifier types other than an initial xyz or `mol2` require generating an initial structure from a SMILES string retrieved from PubChem, and the `rdkit.Chem.rdmolfiles.MolFromSmiles()` function is likely to have trouble generating structures with nested cycles.
+- It is not recommended to generate SPs for large molecules or structures with large cycles without a starting initial geometry. All identifier types other than an initial xyz or `mol2` require generating an initial structure from a SMILES string retrieved from PubChem, and the `rdkit.Chem.rdmolfiles.MolFromSmiles()` function is likely to have trouble generating structures with nested cycles.
