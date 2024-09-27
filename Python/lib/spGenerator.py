@@ -212,7 +212,8 @@ def generateSP(identifier,jobFolder,np,configFile,
                                                   segmentCharges,
                                                   segmentAreas,
                                                   surfaceArea,
-                                                  avgRadius=avgRadius)  
+                                                  avgRadius=avgRadius,
+                                                  logPath=logPath)  
         # Write non-averaged sigmaMatrix
         spPath=os.path.join(jobFolder,'sigmaSurface.csv')
         numpy.savetxt(spPath,
@@ -492,7 +493,7 @@ def crossCheck(identifier,identifierType):
     return smilesString,warning
     
 def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
-                   avgRadius=None):
+                   avgRadius=None,logPath=None):
     """
     getSigmaMatrix() computes the sigma matrix of the molecule.
 
@@ -510,6 +511,8 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
     avgRadius : float or None
         Average radius to use in the averaging algorithm. If None, the
         averaging algorithm is not used.
+    logPath : string or None
+        Path to the log file. If None, no log file is written.
 
     Raises
     ------
@@ -563,6 +566,11 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
         sigmaMatrix[n,4]=segmentAreas[n]*(0.529177249**2)
         # charge density of segment k (e/Angs^2)  
         sigmaMatrix[n,5]=sigmaMatrix[n,3]/sigmaMatrix[n,4] 
+        # if NaN is encountered, raise error
+        if numpy.isnan(sigmaMatrix[n,:]).any():
+            with open(logPath,'a') as logFile:
+                logFile.write(f'\nNaN value encountered in sigma matrix, segment number {n+1}...')
+            raise ValueError('NaN value encountered in sigma matrix...')
     # Check that the total area calculated by NWChem matches
     # the sum of the areas of the segments
     if abs(sum(sigmaMatrix[:,4])-surfaceArea)>0.1:

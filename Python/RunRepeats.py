@@ -32,6 +32,8 @@ parser.add_argument("--preoptimize", help="Pre-optimize the molecule using a sta
 parser.add_argument("--name", help="Tail for the job name.")
 parser.add_argument("--nslots", help="Number of cores/threads to use for NWChem calculations.")
 parser.add_argument("--njobs", help="Number of repeat jobs to be run. Default is 1.")
+parser.add_argument("--noautoz", help="NWChem setting to disable use of internal coordinates. Default is False.")
+parser.add_argument("--iodine", help="The molecule contains an iodine atom. Default is False.")
 
 args=parser.parse_args()
 
@@ -54,6 +56,8 @@ generateFinalXYZ=True
 generateOutputSummary=True
 avgRadius=None
 sigmaBins=[-0.100,0.100,0.001]
+noautoz=False
+iodine=False
 
 
 # =============================================================================
@@ -120,7 +124,6 @@ def call_generateSP(entry,configFile):
         with open(logPath,'a') as logFile:
             logFile.write('\nJob failed for molecule: '+entry[0])
             logFile.write('\nThe following errors were detected:\n')
-            logFile.write(str(error))   
             # Get current system exception
             ex_type, ex_value, ex_traceback = sys.exc_info()
 
@@ -140,6 +143,8 @@ def call_generateSP(entry,configFile):
             logFile.write('\nException message : %s' %ex_value)
             logFile.write('\nStack trace : %s' %stack_trace)
         errorOcurred=True
+    # Return to parent directory
+    os.chdir(mainFolder)
     # Get elapsed time
     t=round(time.time()-t1,2)
     # Output
@@ -190,6 +195,8 @@ def parseUserArgs(userArgs):
         Molecule identifier.
     identifierType : string
         Molecule identifier type.
+    charge : float
+        Molecule charge.
     initialXYZ : string
         Path to initial xyz file, if desired. Otherwise, use 'Random' for a random conformer or 'None' for an algorithm-selected conformer.
     preOptimize : boolean
@@ -212,7 +219,9 @@ def parseUserArgs(userArgs):
         'preoptimize': False,
         'name': 'UNK',
         'nslots': 4,
-        'njobs': 1  
+        'njobs': 1,
+        'noautoz': False,
+        'iodine': False
     }
 
     # Set job_name_tail
@@ -224,10 +233,13 @@ def parseUserArgs(userArgs):
     # Set nslots (number of available cores)
     if userArgs.nslots is not None:
         nslots=userArgs.nslots
+        if int(nslots)<1:
+            # Terminate with an error
+            print(f'\n\tInput error:')
+            print(f'\n\t\tThe value provided for the "--nslots" argument is invalid. Please provide a positive integer.')
+            sys.exit(1)
     else:
         nslots=default_options['nslots']
-
-    # Number of cores to be used by NWChem in each molecule optimization
     np_NWChem=nslots
 
     # Read user-defined charge
@@ -236,6 +248,28 @@ def parseUserArgs(userArgs):
     else:
         charge=default_options['charge']     
 
+    # Read user-selected NWChem configuration options
+    if userArgs.noautoz is not None:
+        noautoz=userArgs.noautoz
+        # Check if provided value is valid
+        if noautoz.lower() not in ['true', 'false']:
+            # Terminate with an error
+            print(f'\n\tInput error:')
+            print(f'\n\t\tThe value provided for the "--noautoz" argument is invalid. Please provide either "True" or "False".')
+            sys.exit(1)
+    else:
+        noautoz=default_options['noautoz']
+    if userArgs.iodine is not None:
+        iodine=userArgs.iodine
+        # Check if provided value is valid
+        if iodine.lower() not in ['true', 'false']:
+            # Terminate with an error
+            print(f'\n\tInput error:')
+            print(f'\n\t\tThe value provided for the "--iodine" argument is invalid. Please provide either "True" or "False".')
+            sys.exit(1)
+    else:
+        iodine=default_options['iodine']
+
     # Read user-defined number of jobs
     if userArgs.njobs is not None:
         nJobs=int(userArgs.njobs)
@@ -243,7 +277,7 @@ def parseUserArgs(userArgs):
         nJobs=default_options['njobs']        
     
     # Random seeds for initial conformer generation
-    randomSeeds=[42 for _ in range(nJobs)]                  
+    randomSeeds=[42 for _ in range(nJobs)]
 
     # Convert initialxyz from string if needed
     if userArgs.initialxyz.upper() in ['NONE', None]:
@@ -298,7 +332,7 @@ def parseUserArgs(userArgs):
             with open(logPath,'a') as logFile:
                 logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry is set by the user to: {userArgs.preoptimize}. This option is only available for mol2 idtypes.')
             preOptimize=False
-            identifier=userArgs.id                
+            identifier=userArgs.id
         else:
             with open(logPath,'a') as logFile:
                 logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry was not set. Default is: {default_options["preoptimize"]}')
@@ -377,14 +411,22 @@ def parseUserArgs(userArgs):
         logFile.write('Initialization complete.\n')
 
     # return user-defined variables
-    return identifier, identifierType, charge, initialXYZ, preOptimize, job_name, np_NWChem, logPath, mainFolder, nJobs, randomSeeds
+    return (
+        identifier, identifierType, charge, initialXYZ, 
+        preOptimize, job_name, np_NWChem, logPath, 
+        mainFolder, nJobs, randomSeeds, noautoz, iodine
+        )
 
 
 # =============================================================================
 # Main Script
 # =============================================================================
 # Parse user arguments
-identifier, identifierType, charge, initialXYZ, preOptimize, job_name, np_NWChem, logPath, mainFolder, nJobs, randomSeeds=parseUserArgs(args) 
+(
+    identifier, identifierType, charge, initialXYZ, 
+    preOptimize, job_name, np_NWChem, logPath, 
+    mainFolder, nJobs, randomSeeds, noautoz, iodine
+ )=parseUserArgs(args) 
 # Initiate count of jobs finished
 count=0
 # Start jobs

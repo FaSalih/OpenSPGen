@@ -284,9 +284,9 @@ def checkConvergence(outputPath,logPath):
                 lastErrorLine=findLastOccurrence(file,['failed','termination'])
                 # add error message after last cosmo iteration to logfile
                 with open(logPath,'a') as logFile:
-                    logFile.write('\nNWChem convergence not reached with COSMO,' 
-                                  + ' only geometry optimization in vacuum succeeded...')
-                    logFile.write('NWChem Error message: ')
+                    logFile.write('NWChem convergence not reached with COSMO,' 
+                                  + ' only geometry optimization in vacuum succeeded...\n')
+                    logFile.write('NWChem Error message: \n')
                     goToLine(file,lastCosmoLine)
                     for line in file:
                         logFile.write(line)
@@ -296,8 +296,8 @@ def checkConvergence(outputPath,logPath):
             lastErrorLine=findLastOccurrence(file,['failed','termination'])
             # add error message to logfile
             with open(logPath,'a') as logFile:
-                logFile.write('\nNWChem convergence not reached (neither in vacuum nor in the COSMO solvation medium)...')
-                logFile.write('NWChem Error message: ')
+                logFile.write('NWChem convergence not reached (neither in vacuum nor in the COSMO solvation medium)...\n')
+                logFile.write('NWChem Error message: \n')
                 goToLine(file,lastErrorLine)
                 for line in file:
                     logFile.write(line)
