@@ -180,9 +180,7 @@ def generateSP(identifier,jobFolder,np,configFile,
     outputPath=os.path.join(jobFolder,'output.nw')
     logPath=os.path.join(jobFolder,'..','job.log')
     converged=nwc.checkConvergence(outputPath,logPath)
-    if not converged: 
-        print('NWChem job did not converge. The full output.nw file will be returned...')
-        removeNWOutput=False
+    if converged != 1: removeNWOutput=False; generateFinalXYZ=True
     # Read cosmo.xyz
     if doCOSMO:
         cosmoPath=os.path.join(jobFolder,name+'.cosmo.xyz')
@@ -226,6 +224,13 @@ def generateSP(identifier,jobFolder,np,configFile,
         numpy.savetxt(spPath,
                       numpy.column_stack((sigma,sigmaProfile)),
                       delimiter=',')
+    # Raise NWChem errors, if any
+    if converged == 0:
+        raise Exception('NWChem job failed to converge in COSMO solvation medium, but converged in vacuum.'
+                        +'\n\tThe full output.nw file along with final configuration will be returned...')
+    elif converged == -1:
+        raise Exception('NWChem job failed to converge in vacuum. Optimization in COSMO solvation medium was not attempted.'
+                        +'\n\tThe full output.nw file along with final configuration will be returned...')
     # Output
     return warning
 
