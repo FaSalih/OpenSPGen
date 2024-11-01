@@ -179,7 +179,7 @@ def generateSP(identifier,jobFolder,np,configFile,
     # Check that nwchem job converged
     outputPath=os.path.join(jobFolder,'output.nw')
     logPath=os.path.join(jobFolder,'..','job.log')
-    converged=nwc.checkConvergence(outputPath,logPath)
+    converged=nwc.checkConvergence(outputPath)
     if converged != 1: removeNWOutput=False; generateFinalXYZ=True
     # Read cosmo.xyz
     if doCOSMO:
@@ -204,7 +204,7 @@ def generateSP(identifier,jobFolder,np,configFile,
     if removeNWOutput:
         os.remove(os.path.join(jobFolder,'output.nw'))
     # Do COSMO
-    if doCOSMO:
+    if doCOSMO and converged >= 0:
         # Get sigmaMatrix
         sigmaMatrix,avgSigmaMatrix=getSigmaMatrix(segmentCoordinates,
                                                   segmentCharges,
@@ -230,7 +230,7 @@ def generateSP(identifier,jobFolder,np,configFile,
                         +'\n\tThe full output.nw file along with final configuration will be returned...')
     elif converged == -1:
         raise Exception('NWChem job failed to converge in vacuum. Optimization in COSMO solvation medium was not attempted.'
-                        +'\n\tThe full output.nw file along with final configuration will be returned...')
+                        +'\n\tThe full output.nw file along with the final configuration will be returned...')
     # Output
     return warning
 
