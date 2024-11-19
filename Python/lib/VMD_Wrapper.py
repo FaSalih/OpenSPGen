@@ -8,13 +8,15 @@ Sections
     . Imports
     
     . Main Function
+        . viewSigmaSurface()
         . xyz2bmp()
         . openVMD()
+        . viewFinalGeometries()
     
     . Auxiliary Functions
 
-Last edit: 2022-03-13
-Author: Dinis Abranches
+Last edit: 2024-11-19
+Author: Dinis Abranches, Fathya Salih
 """
 
 # =============================================================================
@@ -38,7 +40,7 @@ from . import spGenerator as sp
 # Main Functions
 # =============================================================================
 
-def viewSigmaSurface(surfaceCSV,geometryXYZ,vmdPath,avgRadius=0.5,bins=[-0.030,0.030,0.002]):
+def viewSigmaSurface(surfaceCSV,geometryXYZ,vmdPath,avgRadius=0.5,bins=[-0.100,0.100,0.001]):
     
     
     # Read information from sigmaSurface file
@@ -137,7 +139,6 @@ def viewSigmaSurface(surfaceCSV,geometryXYZ,vmdPath,avgRadius=0.5,bins=[-0.030,0
     os.remove(tclPath)
     # Output
     return None
-    
     
 def xyz2bmp(xyzPath,savePath,vmdPath):
     """

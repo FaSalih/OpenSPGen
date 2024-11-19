@@ -8,3 +8,4 @@ sub-tests.sh
 
 Parameter Optimization - Recent versions/
 Python/lib/__pycache__/*
+Python/lib/RDKit_Wrapper_backup.py

@@ -9,7 +9,6 @@ Sections
     
     . Main Functions
         . generateSP()
-        . generateSP_FromSigmaSurface
         . benchmarkPerformance()
         . benchmarkTessellation()
 
@@ -19,8 +18,8 @@ Sections
         . averagingAlgorithm()
         . getSigmaProfile()
 
-Last edit: 2022-06-14
-Author: Dinis Abranches
+Last edit: 2024-11-19
+Author: Dinis Abranches, Fathya Salih
 """
 
 # =============================================================================
@@ -233,13 +232,6 @@ def generateSP(identifier,jobFolder,np,configFile,
                         +'\n\tThe full output.nw file along with the final configuration will be returned...')
     # Output
     return warning
-
-def generateSP_FromSigmaSurface(sigmaSurfacePath,outFolder,
-                                avgRadius=0.5,sigmaBins=[-0.035,0.035,0.001]):
-    
-    return None
-    
-    
 
 def benchmarkPerformance(logPath,nRepetitions,npList,
                          # args passed to generateSP():

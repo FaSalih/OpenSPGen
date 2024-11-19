@@ -18,11 +18,12 @@ Sections
     . Auxiliary Functions
         . copyConfig()
         . findLastOccurrence()
+        . findAllOccurrences()
         . goToLine()
         . findNextOccurrence()
 
-Last edit: 2022-07-11
-Author: Dinis Abranches
+Last edit: 2024-11-19
+Author: Dinis Abranches, Fathya Salih
 """
 
 # =============================================================================
