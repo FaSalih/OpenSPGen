@@ -27,7 +27,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--idtype", help="Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, or mol2. If no idtype is provided, SMILES is assumed.")
 parser.add_argument("--id", help="Molecule identifier. Default is None.")
 parser.add_argument("--charge", help="Molecule charge. Default is 0.")
-parser.add_argument("--initialxyz", help="Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' for a random conformer or 'None' for an algorithm-selected conformer.")
+parser.add_argument("--initialxyz", help="Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' or 'None' for a random conformer.")
 parser.add_argument("--preoptimize", help="Pre-optimize the molecule using a standard forcefield (MMFF94). Options: True or False. Only available if a `mol2` idtype is provided.")
 parser.add_argument("--name", help="Tail for the job name.")
 parser.add_argument("--nslots", help="Number of cores/threads to use for NWChem calculations.")
@@ -198,7 +198,7 @@ def parseUserArgs(userArgs):
     charge : float
         Molecule charge.
     initialXYZ : string
-        Path to initial xyz file, if desired. Otherwise, use 'Random' for a random conformer or 'None' for an algorithm-selected conformer.
+        Path to initial xyz file, if desired. Otherwise, use 'Random' or 'None' for a random conformer.
     preOptimize : boolean
         Pre-optimize the molecule using a standard forcefield (MMFF).
     job_name : string
@@ -368,7 +368,7 @@ def parseUserArgs(userArgs):
             identifier=userArgs.id
     else:
         with open(logPath,'a') as logFile:
-                    logFile.write(f'\n\tNo initial geometry provided. Will use algorithm-selected conformer.')
+                    logFile.write(f'\n\tNo initial geometry provided. Will use a random conformer.')
         initialXYZ=None
         # Check if identifier was provided
         if userArgs.id is None:
@@ -394,7 +394,7 @@ def parseUserArgs(userArgs):
             identifier=userArgs.id
             # Set pre-optimization to true
             with open(logPath,'a') as logFile:
-                    logFile.write('\n\tPre-optimizaion using MMFF of algorithm-selected geometry is set to: True')
+                    logFile.write('\n\tPre-optimizaion using MMFF of a random geometry is set to: True')
             preOptimize=True
 
     # Create log file
