@@ -286,10 +286,10 @@ def parseUserArgs(userArgs):
         initialXYZ=userArgs.initialxyz
 
     # Specify full job name
-    if initialXYZ.upper() in ['RANDOM', 'RAND']:
-        job_name=f'SP-RandInitXYZ-Mol_{job_name_tail}'
-    elif initialXYZ is None:
+    if initialXYZ is None:
         job_name=f'SP-NoInitXYZ-Mol_{job_name_tail}'
+    elif initialXYZ.upper() in ['RANDOM', 'RAND']:
+        job_name=f'SP-RandInitXYZ-Mol_{job_name_tail}'
     else:
         job_name=f'SP-GivenInitXYZ-Mol_{job_name_tail}'
 
