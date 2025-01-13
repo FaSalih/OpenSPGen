@@ -9,7 +9,7 @@ export OMP_NUM_THREADS=${NSLOTS}
 module purge
 conda deactivate
 conda activate cursed
-module load ./7.2 
+module load nwchem 
 
 # Print the hostname of the machine the job is running on
 echo "Job is running on machine: $(hostname)"
@@ -25,6 +25,7 @@ mol_name="Acetyl fentanyl"
 identifier_type="SMILES"
 identifier="CC(=O)N(C1CCN(CC1)CCC2=CC=CC=C2)C3=CC=CC=C3"
 initXYZ=None
+charge=0
 
 job_name="${mol_idx}-${identifier_type}"
 
@@ -34,6 +35,7 @@ echo "mol_name = ${mol_name}"
 echo "identifier_type = ${identifier_type}"
 echo "xyz file path = ${initXYZ}"
 echo "identifier = ${identifier}"
+echo "charge = ${charge}"
 
 
 ## ----------------------------------------------------------
@@ -50,7 +52,7 @@ cd "$MY_TEMP"
 cd Python
 
 # Run the generation script
-python RunRepeats.py --idtype ${identifier_type} --id ${identifier} --name ${job_name} --nslots $NSLOTS
+python RunRepeats.py --idtype ${identifier_type} --id ${identifier} --charge ${charge} --name ${job_name} --nslots $NSLOTS
 
 # Go back into tmp/XXX
 cd ..

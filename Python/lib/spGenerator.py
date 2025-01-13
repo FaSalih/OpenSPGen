@@ -18,8 +18,8 @@ Sections
         . averagingAlgorithm()
         . getSigmaProfile()
 
-Last edit: 2024-11-19
-Author: Dinis Abranches, Fathya Salih
+Last edit: 2022-06-14
+Author: Dinis Abranches
 """
 
 # =============================================================================
@@ -60,7 +60,7 @@ def generateSP(identifier,jobFolder,np,configFile,
                generateOutputSummary=True,
                doCOSMO=True,
                avgRadius=0.5,
-               sigmaBins=[-0.100,0.100,0.001]):
+               sigmaBins=[-0.250,0.250,0.001]):
     """
     generateSP() is the main function of the workflow developed to generate
     consistent sigma profiles. Given an identifier of a molecule, this function
@@ -149,7 +149,8 @@ def generateSP(identifier,jobFolder,np,configFile,
     """
     # Initialize warning
     warning=None
-    # If charge or initialXYZ are not provided, retrieve mol SMILES string
+    # If charge or initialXYZ are not provided, retrieve mol SMILES string 
+    # (for calculating charge and generating geometry, respectively)
     if charge is None or initialXYZ in [None, 'Random']:
         # If identifier is not a SMILES string, obtain a SMILES string
         if identifierType.upper() not in ['SMILES', 'MOL2']: 
@@ -167,7 +168,10 @@ def generateSP(identifier,jobFolder,np,configFile,
     else: # Copy supplied xyz file to job folder as initialGeometry.xyz
         shutil.copy2(initialXYZ,xyzPath)
     # Get formal charge of molecule
-    if charge is None: charge=rdmolops.GetFormalCharge(molecule); print('\ngiven charge was none\n')
+    if charge is None: 
+        charge=rdmolops.GetFormalCharge(molecule)
+        with open(logPath,'a') as logFile:
+            logFile.write('\nGiven charge was None, calculated charge: '+str(charge)+'\n')
     # Use job folder name as job name
     name=os.path.basename(os.path.normpath(jobFolder))
     # Generate NWChem input script
@@ -185,7 +189,7 @@ def generateSP(identifier,jobFolder,np,configFile,
         cosmoPath=os.path.join(jobFolder,name+'.cosmo.xyz')
         segmentCoordinates,segmentCharges=nwc.readCOSMO(cosmoPath)
     # Read output file
-    surfaceArea,segmentAreas,atomCoords=nwc.readOutput(outputPath,doCOSMO)
+    surfaceArea,segmentAreas,atomCoords,segAtoms=nwc.readOutput(outputPath,doCOSMO)
     # Generate final XYZ
     if generateFinalXYZ: 
         nwc.generateFinalXYZ(atomCoords,
@@ -209,6 +213,7 @@ def generateSP(identifier,jobFolder,np,configFile,
                                                   segmentCharges,
                                                   segmentAreas,
                                                   surfaceArea,
+                                                  segAtoms,
                                                   avgRadius=avgRadius,
                                                   logPath=logPath)  
         # Write non-averaged sigmaMatrix
@@ -232,19 +237,21 @@ def generateSP(identifier,jobFolder,np,configFile,
                         +'\n\tThe full output.nw file along with the final configuration will be returned...')
     # Output
     return warning
-
+    
 def benchmarkPerformance(logPath,nRepetitions,npList,
                          # args passed to generateSP():
                          identifier,configFile,
                          identifierType='SMILES',
                          charge=None,
                          initialXYZ=None,
+                         randomSeed=42,
                          cleanOutput=True,
+                         removeNWOutput=True,
                          generateFinalXYZ=True,
                          generateOutputSummary=True,
                          doCOSMO=True,
                          avgRadius=0.5,
-                         sigmaBins=[-0.035,0.035,0.001]):
+                         sigmaBins=[-0.250,0.250,0.001]):
     """
     benchmarkPerformance() benchmarks the performance of generateSP()) as a
     function of the number of threads used. For each np in npList, the function
@@ -293,7 +300,9 @@ def benchmarkPerformance(logPath,nRepetitions,npList,
                    identifierType=identifierType,
                    charge=charge,
                    initialXYZ=initialXYZ,
+                   randomSeed=randomSeed,
                    cleanOutput=cleanOutput,
+                   removeNWOutput=removeNWOutput,
                    generateFinalXYZ=generateFinalXYZ,
                    generateOutputSummary=generateOutputSummary,
                    doCOSMO=doCOSMO,
@@ -314,12 +323,14 @@ def benchmarkTessellation(jobFolder,tessellation,
                           identifierType='SMILES',
                           charge=None,
                           initialXYZ=None,
+                          randomSeed=42,
                           cleanOutput=True,
+                          removeNWOutput=True,
                           generateFinalXYZ=True,
                           generateOutputSummary=True,
                           doCOSMO=True,
                           avgRadius=0.5,
-                          sigmaBins=[-0.035,0.035,0.001]):
+                          sigmaBins=[-0.250,0.250,0.001]):
     """
     benchmarkTessellation() benchmarks the impact of tessellation on 
     generateSP(). For each tessellation level in "tesselation", the function
@@ -381,7 +392,9 @@ def benchmarkTessellation(jobFolder,tessellation,
                        identifierType=identifierType,
                        charge=charge,
                        initialXYZ=initialXYZ,
+                       randomSeed=randomSeed,
                        cleanOutput=cleanOutput,
+                       removeNWOutput=removeNWOutput,
                        generateFinalXYZ=generateFinalXYZ,
                        generateOutputSummary=generateOutputSummary,
                        doCOSMO=doCOSMO,
@@ -449,7 +462,7 @@ def crossCheck(identifier,identifierType):
         except:
             time.sleep(10)
     # Get PubChem identifier type
-    if identifierType=='CAS Number': pubType='name'
+    if identifierType=='CAS-Number': pubType='name'
     if identifierType=='InChI': pubType='inchi'
     if identifierType=='InChIKey': pubType='inchikey'
     # Obtain SMILES string using PubChemPy 
@@ -489,7 +502,7 @@ def crossCheck(identifier,identifierType):
     # Output
     return smilesString,warning
     
-def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
+def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,segAtoms,
                    avgRadius=None,logPath=None):
     """
     getSigmaMatrix() computes the sigma matrix of the molecule.
@@ -505,6 +518,8 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
         List with the surface area of each segment (a.u.^2).
     surfaceArea : float
         Total surface area of the molecule (Ang^2).
+    segAtoms : list of floats
+        Atoms to which segments belong
     avgRadius : float or None
         Average radius to use in the averaging algorithm. If None, the
         averaging algorithm is not used.
@@ -527,6 +542,7 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
             . Column 3 - charge of point charge (e)
             . Column 4 - area of surface segment (Angs^2)
             . Column 5 - charge density of segment (e/Angs^2)
+            . Column 6 - atom index to which segment belongs
 
     avgSigmaMatrix : numpy.ndarray of floats
         Matrix containing sigma surface information, with column 5 recalculated
@@ -537,11 +553,12 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
             . Column 3 - charge of point charge (e)
             . Column 4 - area of surface segment (Angs^2)
             . Column 5 - charge density of segment (e/Angs^2)
+            . Column 6 - atom index to which segment belongs
     """
     # Get total number of segments
     nSeg=len(segmentCharges)
     # Generate empty sigmaMatrix
-    sigmaMatrix=numpy.zeros([nSeg,6])
+    sigmaMatrix=numpy.zeros([nSeg,7])
     # Structure of sigmaMatrix (each line represents a surface segment)
     #   . Column 0 - x coordinate of point charge (Angs)
     #   . Column 1 - y coordinate of point charge (Angs)
@@ -549,6 +566,7 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
     #   . Column 3 - charge of point charge (e)
     #   . Column 4 - area of surface segment (Angs^2)
     #   . Column 5 - charge density of segment (e/Angs^2)
+    #   . Column 6 - atom index to which segment belongs
     # Fill out sigmaMatrix
     for n in range(nSeg):
         # x coordinate of point charge n (Angs)
@@ -563,6 +581,8 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,
         sigmaMatrix[n,4]=segmentAreas[n]*(0.529177249**2)
         # charge density of segment k (e/Angs^2)  
         sigmaMatrix[n,5]=sigmaMatrix[n,3]/sigmaMatrix[n,4] 
+        # atom index to which segment belongs
+        sigmaMatrix[n,6]=segAtoms[n]
         # if NaN is encountered, raise error
         if numpy.isnan(sigmaMatrix[n,:]).any():
             with open(logPath,'a') as logFile:
@@ -594,6 +614,7 @@ def averagingAlgorithm(sigmaMatrix,avgRadius):
             . Column 3 - charge of point charge (e)
             . Column 4 - area of surface segment (Angs^2)
             . Column 5 - charge density of segment (e/Angs^2)
+            . Column 6 - atom index to which segment belongs
     avgRadius : float
         Average radius to use in the averaging algorithm.
 
@@ -608,6 +629,7 @@ def averagingAlgorithm(sigmaMatrix,avgRadius):
             . Column 3 - charge of point charge (e)
             . Column 4 - area of surface segment (Angs^2)
             . Column 5 - charge density of segment (e/Angs^2)
+            . Column 6 - atom index to which segment belongs
 
     """
     # Get squared avaraging radius
@@ -647,6 +669,7 @@ def getSigmaProfile(sigmaMatrix,sigmaBins):
             . Column 3 - charge of point charge (e)
             . Column 4 - area of surface segment (Angs^2)
             . Column 5 - charge density of segment (e/Angs^2)
+            . Column 6 - atom index to which segment belongs
     sigmaBins : list of floats
         List containing information about the binning procedure for the
         sigma profile:

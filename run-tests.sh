@@ -10,11 +10,12 @@ export OMP_NUM_THREADS=${NSLOTS}
 module purge
 conda deactivate
 conda activate cursed
-# module load ./7.2 
+module load nwchem
 
 ## ----------------------------------------------------------
 ## Set up all test parameters
 mol_name="Methane"
+charge=0
 identifier_types=("CAS-Number" "InChIKey" "SMILES" XYZ)
 identifiers=("74-82-8" "VNWKTOKETHGBQD-UHFFFAOYSA-N" "C" None)
 initXYZs=(None None None "manuscript-databases/VT-2005_XYZs/VT2005-1.xyz")
@@ -52,7 +53,7 @@ do
     cd Python
 
     # Run the generation script
-    python RunRepeats.py --idtype ${identifier_type} --id ${identifier} --name ${job_name} --nslots $NSLOTS --initXYZ ${initXYZ}
+    python RunRepeats.py --idtype ${identifier_type} --id ${identifier} --charge ${charge} --name ${job_name} --nslots $NSLOTS --initXYZ ${initXYZ}
 
     # Go back into tmp/XXX
     cd ..

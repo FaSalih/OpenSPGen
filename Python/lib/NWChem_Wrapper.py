@@ -22,8 +22,8 @@ Sections
         . goToLine()
         . findNextOccurrence()
 
-Last edit: 2024-11-19
-Author: Dinis Abranches, Fathya Salih
+Last edit: 2022-07-11
+Author: Dinis Abranches
 """
 
 # =============================================================================
@@ -194,6 +194,8 @@ def readOutput(outputPath,doCOSMO=True):
             X coordinate (float) (Ang)
             Y coordinate (float) (Ang)
             Z coordinate (float) (Ang)
+    segAtoms : list of ints
+        List containing the atom indices that each segment belongs to.
 
     """
     # Open output file
@@ -203,8 +205,23 @@ def readOutput(outputPath,doCOSMO=True):
             lastOccurrenceLine=findLastOccurrence(file,['-cosmo-','solvent'])
             # Go to line of last occurrence
             goToLine(file,lastOccurrenceLine)
+            # Retrieve number of segments per atom
+            findNextOccurrence(file,'nspa,') # find table header
+            file.readline() # skip separator
+            # Initialize number of elements per atom
+            numSegments=[]
+            while True:
+                # Read line
+                lineSplit=file.readline().split()
+                nspa=lineSplit[2][:-1]
+                # Check if table has ended
+                if lineSplit[0] == 'number': break
+                numSegments.append(nspa)
+            # Populate array with segment assignments
+            segAtoms = [[i+1]*int(numSegments[i]) for i in range(len(numSegments))]
+            flat_list = lambda main_list: [item for sublist in main_list for item in sublist]
+            segAtoms = flat_list(segAtoms)
             # Retrieve total number of segments
-            lineSplit=findNextOccurrence(file,'-cosmo-')
             nSeg=int(lineSplit[-1])
             # Retrieve total surface area
             lineSplit=file.readline().split()
@@ -255,7 +272,7 @@ def readOutput(outputPath,doCOSMO=True):
                                float(lineSplit[4]),
                                float(lineSplit[5])])
     # Output
-    return surfaceArea,segmentAreas,atomCoords
+    return surfaceArea,segmentAreas,atomCoords,segAtoms
 
 def checkConvergence(outputPath):
     ''' 
