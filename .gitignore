@@ -1,0 +1,6 @@
+# Ignore node_modules directory
+.vscode/
+Python/lib/__pycache__/*
+
+# Ignore job log files
+*.o*
