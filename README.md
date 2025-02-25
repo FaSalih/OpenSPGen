@@ -3,6 +3,8 @@ An open source sigma profile generator.
 
 ![plot](./imgs/workflow.png)
 
+The pre-print associated with this work is available on ChemRxiv: [Open-Source Generation of Sigma Profiles: Impact of Quantum Chemistry and Solvation Treatment on Machine Learning Performance](10.26434/chemrxiv-2025-jggvw).
+
 ## Installation Instructions
 1. Install the open source DFT package `NWChem` without Python support. The version used during the development of this package is `7.0.2` available for download [here](https://github.com/nwchemgit/nwchem/releases/tag/v7.0.2-release)*. Functionality has been tested with later versions (version `7.2.0` to be specific), but consistency of the produced sigma profiles with version `7.0.2` has not been tested.
 2. Add the path of the `nwchem` executable to your `PATH` variable (the `nwchem` executable path should be along the lines of: `User/Desktop/nwchem-7.0.2/bin/LINUX64`)
