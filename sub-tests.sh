@@ -12,8 +12,7 @@
 export OMP_NUM_THREADS=${NSLOTS}
 module purge
 conda deactivate
-#conda activate spg-env
-conda activate cursed
+conda activate spg-env
 module load nwchem/7.2
 
 ## ----------------------------------------------------------

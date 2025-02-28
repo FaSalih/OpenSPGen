@@ -62,5 +62,7 @@ rm -rf Python
 cp -r * $curr
 # Remove temp folder (tmp/XXX)
 /bin/rm -r $MY_TEMP
+# Return to current directory
+cd $curr
 
 
