@@ -24,7 +24,7 @@ from lib import spGenerator as sp
 # Parse user arguments
 parser=argparse.ArgumentParser()
 
-parser.add_argument("--idtype",required=True,  help="Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, or mol2 (Not case sensitive, but must include separators like `-`). This argument is required.")
+parser.add_argument("--idtype",required=True,  help="Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, mol2, or xyz (Not case sensitive, but must include separators like `-`). This argument is required.")
 parser.add_argument("--id", required=True, help="Molecule identifier. This argument is required.")
 parser.add_argument("--charge", help="Molecule charge. Default is None and will be calculated later on using `rdkit.Chem.rdmolops`.")
 parser.add_argument("--initialxyz", help="Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' or 'None' for a random conformer.")
@@ -226,10 +226,10 @@ def parseUserArgs(userArgs):
 
     # Check if user provided idtype is valid
     if userArgs.idtype is not None:
-        if userArgs.idtype.lower() not in ['smiles', 'cas-number', 'inchi', 'inchikey', 'mol2']:
+        if userArgs.idtype.lower() not in ['smiles', 'cas-number', 'inchi', 'inchikey', 'mol2', 'xyz']:
             # Terminate with an error
             print(f'\n\tInput error:')
-            print(f'\n\t\tThe value provided for the "--idtype" argument is invalid. Please provide one of the following options: SMILES, CAS-Number, InChI, InChIKey, or mol2.')
+            print(f'\n\t\tThe value provided for the "--idtype" argument is invalid. Please provide one of the following options: SMILES, CAS-Number, InChI, InChIKey, mol2, or xyz.')
             sys.exit(1)
 
     # Set job_name_tail
