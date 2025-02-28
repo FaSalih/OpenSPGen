@@ -40,9 +40,6 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import rdForceFieldHelpers as rdff
 from rdkit.Chem import rdFreeSASA
 
-# Local
-from lib import VMD_Wrapper as vmd
-
 # =============================================================================
 # Main Functions
 # =============================================================================
