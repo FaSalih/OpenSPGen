@@ -2,8 +2,9 @@
 .vscode/
 Python/lib/__pycache__/*
 
-# Ignore job log files
+# Ignore job log files and test files/directories
 *.o*
+test*
 
 # Ignore backup files
 Python/RunRepeats_backup.py

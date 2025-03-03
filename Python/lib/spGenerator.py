@@ -138,7 +138,7 @@ def generateSP(identifier,jobFolder,np,configFile,
             sigmaBins[0] - Central coordinate of the first bin
             sigmaBins[1] - Central coordinate of the last bin
             sigmaBins[2] - Step between the centers of each bin
-        The default is [-0.035,0.035,0.001].
+        The default is [-0.250,0.250,0.001].
 
     Returns
     -------
