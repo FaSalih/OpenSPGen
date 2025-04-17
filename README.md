@@ -13,7 +13,8 @@ Open source sigma profile generator
    # Create a conda environment for all the dependencies
    conda env create -n SPG --file crc-cursed.yml
    ```
-5. Run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz).
+5. Add `SPG/Python` folder to your device's path variable.
+6. Run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz).
    ```
    ./run-tests.sh
    ```
