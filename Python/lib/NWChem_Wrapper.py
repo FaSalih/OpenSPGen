@@ -22,8 +22,8 @@ Sections
         . goToLine()
         . findNextOccurrence()
 
-Last edit: 2022-07-11
-Author: Dinis Abranches
+Last edit: 2024-11-19
+Author: Dinis Abranches, Fathya Salih
 """
 
 # =============================================================================
@@ -153,15 +153,21 @@ def readCOSMO(cosmoPath):
         # Loop with nSegments iterations
         for __ in range(nSegments):
             # Get coordinates line and split
-            coordLine=file.readline().split() # "Bq x y z"
+            coordLine=file.readline().split() # "Bq x y z" OR "Bq x y z q" 
             # Append coordinates to container
             segmentCoordinates.append([float(coordLine[1]),
                                        float(coordLine[2]),
                                        float(coordLine[3])])
-            # Get charge line
-            chargeLine=file.readline().split() # Single value
+            # Check line structure
+            if len(coordLine) == 4: # "Bq x y z" \n "q"
+                # Get charge line
+                chargeLine=file.readline().split()  # Single value
+                segmentCharge=chargeLine[0]
+            else: # "Bq x y z q"
+                # Get charge from coordinate line
+                segmentCharge=coordLine[-1]    # Last value
             # Append symmetric of charge to container
-            segmentCharges.append(-float(chargeLine[0]))
+            segmentCharges.append(-float(segmentCharge))
     # Output
     return segmentCoordinates,segmentCharges
 

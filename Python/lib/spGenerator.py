@@ -18,8 +18,8 @@ Sections
         . averagingAlgorithm()
         . getSigmaProfile()
 
-Last edit: 2022-06-14
-Author: Dinis Abranches
+Last edit: 2024-11-19
+Author: Dinis Abranches, Fathya Salih
 """
 
 # =============================================================================
@@ -42,7 +42,7 @@ from rdkit import Chem
 from rdkit.Chem import rdmolops
 
 # Local
-from lib import RDKit_Wrapper as rdk   # seeded initial conformer generation
+from lib import RDKit_Wrapper0 as rdk   # seeded initial conformer generation
 from lib import NWChem_Wrapper as nwc
 
 # =============================================================================
@@ -60,7 +60,7 @@ def generateSP(identifier,jobFolder,np,configFile,
                generateOutputSummary=True,
                doCOSMO=True,
                avgRadius=0.5,
-               sigmaBins=[-0.250,0.250,0.001]):
+               sigmaBins=[-0.100,0.100,0.001]):
     """
     generateSP() is the main function of the workflow developed to generate
     consistent sigma profiles. Given an identifier of a molecule, this function
@@ -251,7 +251,7 @@ def benchmarkPerformance(logPath,nRepetitions,npList,
                          generateOutputSummary=True,
                          doCOSMO=True,
                          avgRadius=0.5,
-                         sigmaBins=[-0.250,0.250,0.001]):
+                         sigmaBins=[-0.100,0.100,0.001]):
     """
     benchmarkPerformance() benchmarks the performance of generateSP()) as a
     function of the number of threads used. For each np in npList, the function
@@ -330,7 +330,7 @@ def benchmarkTessellation(jobFolder,tessellation,
                           generateOutputSummary=True,
                           doCOSMO=True,
                           avgRadius=0.5,
-                          sigmaBins=[-0.250,0.250,0.001]):
+                          sigmaBins=[-0.100,0.100,0.001]):
     """
     benchmarkTessellation() benchmarks the impact of tessellation on 
     generateSP(). For each tessellation level in "tesselation", the function
@@ -702,6 +702,82 @@ def getSigmaProfile(sigmaMatrix,sigmaBins):
     # Loop over sigma surface
     for n in range(sigmaMatrix.shape[0]):
         
+        i_left=int(numpy.floor((sigmaMatrix[n,5]-sigmaBins[0])/sigmaBins[2]))
+        w=(sigma[i_left+1]-sigmaMatrix[n,5])/sigmaBins[2]
+        sp[i_left]+=w*sigmaMatrix[n,4]
+        sp[i_left+1]+=(1-w)*sigmaMatrix[n,4]
+
+    # Output
+    return sigma,sp
+         
+def getModSigmaProfile(sigmaMatrix,sigmaBins,LOUD=True):
+    """
+    getModSigmaProfile() calculates the sigma profile of the molecule described by
+    sigmaMatrix. Modified by removing elements with large charge elements.
+
+    Parameters
+    ----------
+    sigmaMatrix : numpy.ndarray of floats
+        Matrix containing sigma surface information:
+            . Column 0 - x coordinate of point charge (Angs)
+            . Column 1 - y coordinate of point charge (Angs)
+            . Column 2 - z coordinate of point charge (Angs)
+            . Column 3 - charge of point charge (e)
+            . Column 4 - area of surface segment (Angs^2)
+            . Column 5 - charge density of segment (e/Angs^2)
+            . Column 6 - atom index to which segment belongs
+    sigmaBins : list of floats
+        List containing information about the binning procedure for the
+        sigma profile:
+            sigmaBins[0] - Central coordinate of the first bin
+            sigmaBins[1] - Central coordinate of the last bin
+            sigmaBins[2] - Step between the centers of each bin
+    LOUD : Boolean
+        Whether or not to print out the number of elements removed.
+
+    Raises
+    ------
+    ValueError
+        DESCRIPTION.
+
+    Returns
+    -------
+    sigma : list of floats
+        List containing the sigma bins (e/Ang^2)
+    sp : list of floats
+        List containing the sigma profile values for each sigma bin (Ang^2).
+
+    """
+    # Check that the sigmaSurface values are within the sigma range
+    condMin=min(sigmaMatrix[:,5])<sigmaBins[0]
+    condMax=max(sigmaMatrix[:,5])>sigmaBins[1]
+    if condMin:
+        # find area of element with minimum charge
+        minElement=numpy.where(sigmaMatrix[:,5]==min(sigmaMatrix[:,5]))[0]
+        minArea=sigmaMatrix[minElement,4]
+        areaRatio=minArea/numpy.sum(sigmaMatrix[:,4])
+        if areaRatio <= 0.01:
+            # remove element from matrix
+            sigmaMatrix=numpy.delete(sigmaMatrix, (minElement), axis=0)
+        else:
+            raise ValueError(f'Sigma values outside of range. An element carrying a charge of {min(sigmaMatrix[:,5])} was found occupying an area representing > 0.01 of sigma surface...')
+    if condMax:
+        # find area of element with maximum charge
+        maxElement=numpy.where(sigmaMatrix[:,5]==max(sigmaMatrix[:,5]))[0]
+        maxArea=sigmaMatrix[maxElement,4]
+        areaRatio=maxArea/numpy.sum(sigmaMatrix[:,4])
+        if areaRatio <= 0.01:
+            # remove element from matrix
+            sigmaMatrix=numpy.delete(sigmaMatrix, (maxElement), axis=0)
+        else:
+            raise ValueError(f'Sigma values outside of range. An element carrying a charge of {max(sigmaMatrix[:,5])} was found occupying an area representing > 0.01 of sigma surface...')
+
+    # Generate bins (location of bin center, sigma vector)
+    sigma=numpy.arange(sigmaBins[0],sigmaBins[1]+sigmaBins[2],sigmaBins[2])
+    # Initialize sigma profile vector
+    sp=numpy.zeros(len(sigma))
+    # Loop over sigma surface
+    for n in range(sigmaMatrix.shape[0]):
         i_left=int(numpy.floor((sigmaMatrix[n,5]-sigmaBins[0])/sigmaBins[2]))
         w=(sigma[i_left+1]-sigmaMatrix[n,5])/sigmaBins[2]
         sp[i_left]+=w*sigmaMatrix[n,4]

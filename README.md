@@ -27,18 +27,18 @@ The below help message summarizes the required and optional user inputs to run t
 ```
 usage: RunRepeats.py [-h] --idtype IDTYPE --id ID [--charge CHARGE] [--initialxyz INITIALXYZ] [--preoptimize PREOPTIMIZE] [--name NAME] [--nslots NSLOTS] [--njobs NJOBS] [--noautoz NOAUTOZ]
                      [--iodine IODINE]
-
+                     
 options:
   -h, --help            show this help message and exit
-  --idtype IDTYPE       Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, or mol2 (Not case sensitive, but must include separators like `-`). This argument is required.
-  --id ID               Molecule identifier. This argument is required.
-  --charge CHARGE       Molecule charge. Default is None and will be calculated later on using `rdkit.Chem.rdmolops`.
+  --idtype IDTYPE       Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, or mol2. If no idtype is provided, SMILES is assumed.
+  --id ID               Molecule identifier. Default is None.
+  --charge CHARGE       Molecule charge. Default is 0.
   --initialxyz INITIALXYZ
-                        Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' or 'None' for a random conformer.
+                        Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' for a random conformer or 'None' for an algorithm-selected conformer.
   --preoptimize PREOPTIMIZE
                         Pre-optimize the molecule using a standard forcefield (MMFF94). Options: True or False. Only available if a `mol2` idtype is provided.
-  --name NAME           Tail for the job name. Default is `UNK`.
-  --nslots NSLOTS       Number of cores/threads to use for NWChem calculations. Default is 4.
+  --name NAME           Tail for the job name.
+  --nslots NSLOTS       Number of cores/threads to use for NWChem calculations.
   --njobs NJOBS         Number of repeat jobs to be run. Default is 1.
   --noautoz NOAUTOZ     NWChem setting to disable use of internal coordinates. Default is False.
   --iodine IODINE       The molecule contains an iodine atom. Default is False.

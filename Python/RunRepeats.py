@@ -24,13 +24,13 @@ from lib import spGenerator as sp
 # Parse user arguments
 parser=argparse.ArgumentParser()
 
-parser.add_argument("--idtype",required=True,  help="Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, or mol2 (Not case sensitive, but must include separators like `-`). This argument is required.")
-parser.add_argument("--id", required=True, help="Molecule identifier. This argument is required.")
-parser.add_argument("--charge", help="Molecule charge. Default is None and will be calculated later on using `rdkit.Chem.rdmolops`.")
-parser.add_argument("--initialxyz", help="Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' or 'None' for a random conformer.")
+parser.add_argument("--idtype", help="Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, or mol2. If no idtype is provided, SMILES is assumed.")
+parser.add_argument("--id", help="Molecule identifier. Default is None.")
+parser.add_argument("--charge", help="Molecule charge. Default is 0.")
+parser.add_argument("--initialxyz", help="Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' for a random conformer or 'None' for an algorithm-selected conformer.")
 parser.add_argument("--preoptimize", help="Pre-optimize the molecule using a standard forcefield (MMFF94). Options: True or False. Only available if a `mol2` idtype is provided.")
-parser.add_argument("--name", help="Tail for the job name. Default is `UNK`.")
-parser.add_argument("--nslots", help="Number of cores/threads to use for NWChem calculations. Default is 4.")
+parser.add_argument("--name", help="Tail for the job name.")
+parser.add_argument("--nslots", help="Number of cores/threads to use for NWChem calculations.")
 parser.add_argument("--njobs", help="Number of repeat jobs to be run. Default is 1.")
 parser.add_argument("--noautoz", help="NWChem setting to disable use of internal coordinates. Default is False.")
 parser.add_argument("--iodine", help="The molecule contains an iodine atom. Default is False.")
@@ -55,7 +55,7 @@ removeNWOutput=False
 generateFinalXYZ=True
 generateOutputSummary=True
 avgRadius=None
-sigmaBins=[-0.250,0.250,0.001]
+sigmaBins=[-0.100,0.100,0.001]
 noautoz=False
 iodine=False
 
@@ -198,7 +198,7 @@ def parseUserArgs(userArgs):
     charge : float
         Molecule charge.
     initialXYZ : string
-        Path to initial xyz file, if desired. Otherwise, use 'Random' or 'None' for a random conformer.
+        Path to initial xyz file, if desired. Otherwise, use 'Random' for a random conformer or 'None' for an algorithm-selected conformer.
     preOptimize : boolean
         Pre-optimize the molecule using a standard forcefield (MMFF).
     job_name : string
@@ -214,7 +214,7 @@ def parseUserArgs(userArgs):
     default_options={
         'idtype': 'SMILES',
         'id': None,
-        'charge': None,
+        'charge': 0,
         'initialxyz': None,
         'preoptimize': False,
         'name': 'UNK',
@@ -223,14 +223,6 @@ def parseUserArgs(userArgs):
         'noautoz': False,
         'iodine': False
     }
-
-    # Check if user provided idtype is valid
-    if userArgs.idtype is not None:
-        if userArgs.idtype.lower() not in ['smiles', 'cas-number', 'inchi', 'inchikey', 'mol2']:
-            # Terminate with an error
-            print(f'\n\tInput error:')
-            print(f'\n\t\tThe value provided for the "--idtype" argument is invalid. Please provide one of the following options: SMILES, CAS-Number, InChI, InChIKey, or mol2.')
-            sys.exit(1)
 
     # Set job_name_tail
     if userArgs.name is not None:
@@ -285,7 +277,7 @@ def parseUserArgs(userArgs):
         nJobs=default_options['njobs']        
     
     # Random seeds for initial conformer generation
-    randomSeeds=[42+nJob for nJob in range(nJobs)]
+    randomSeeds=[42 for _ in range(nJobs)]
 
     # Convert initialxyz from string if needed
     if userArgs.initialxyz.upper() in ['NONE', None]:
@@ -376,7 +368,7 @@ def parseUserArgs(userArgs):
             identifier=userArgs.id
     else:
         with open(logPath,'a') as logFile:
-                    logFile.write(f'\n\tNo initial geometry provided. Will use a random conformer.')
+                    logFile.write(f'\n\tNo initial geometry provided. Will use algorithm-selected conformer.')
         initialXYZ=None
         # Check if identifier was provided
         if userArgs.id is None:
@@ -402,7 +394,7 @@ def parseUserArgs(userArgs):
             identifier=userArgs.id
             # Set pre-optimization to true
             with open(logPath,'a') as logFile:
-                    logFile.write('\n\tPre-optimizaion using MMFF of a random geometry is set to: True')
+                    logFile.write('\n\tPre-optimizaion using MMFF of algorithm-selected geometry is set to: True')
             preOptimize=True
 
     # Create log file
