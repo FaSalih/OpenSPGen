@@ -3,7 +3,7 @@ An open source sigma profile generator.
 
 ![plot](./imgs/workflow.png)
 
-The pre-print associated with this work is available on ChemRxiv: [Open-Source Generation of Sigma Profiles: Impact of Quantum Chemistry and Solvation Treatment on Machine Learning Performance](10.26434/chemrxiv-2025-jggvw).
+The pre-print associated with this work is available on ChemRxiv: [Open-Source Generation of Sigma Profiles: Impact of Quantum Chemistry and Solvation Treatment on Machine Learning Performance](https://chemrxiv.org/engage/chemrxiv/article-details/67bc9bf6fa469535b9bb872e).
 
 ## Installation Instructions
 1. Install the open source DFT package `NWChem` without Python support. The version used during the development of this package is `7.0.2` available for download [here](https://github.com/nwchemgit/nwchem/releases/tag/v7.0.2-release)*. Functionality has been tested with later versions (version `7.2.0` to be specific), but consistency of the produced sigma profiles with version `7.0.2` has not been tested.
@@ -17,7 +17,8 @@ The pre-print associated with this work is available on ChemRxiv: [Open-Source G
    # Create a conda environment for all the dependencies
    conda env create -n spg-env --file spg.yml
    ```
-5. Run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz).
+5. Add the location of the `Python` directory to your device's path variable.
+6. Run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz).
    ```
    ./run-tests.sh
    ```
