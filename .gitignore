@@ -8,3 +8,7 @@ test*
 
 # Ignore backup files
 Python/RunRepeats_backup.py
+
+# Ignore python and jupyter cache
+manuscript-databases/GP-Training-HF_yk/.ipynb_checkpoints
+Python/lib/__pycache__/*

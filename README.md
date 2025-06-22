@@ -22,6 +22,8 @@ The pre-print associated with this work is available on ChemRxiv: [Open-Source G
    ./run-tests.sh
    ```
 
+6. To run future jobs, either copy the `Python` folder into your working directory or add the path where it was installed to your `PATH` variable.
+
 *Note: Because the DFT software used in this package is only available for Linux and macOS distributions, the complete tool can only be run and should be installed on those machines. 
 
 ## Usage Instructions
@@ -69,7 +71,7 @@ This repository is associated with a study on the effect of quantum chemistry on
    - `performance_per_fold`: `csv` files for the performance of different trained models.
    - *Averaged Performances*: `avg_mae.csv`, `avg_R2.csv`, `std_mae.csv`, `std_R2.csv` are the GP performances averaged over the different training folds.
 - **Example Usage of Pre-trained GP Model**: the notebook `manuscript-databases/deploy_gp_model.ipynb` shows how to use one of the pre-trained GP models to predict a thermophysical property for a given sigma profile. 
-
+- **Example For Training a GP Model**: the notebook `manuscript-databases/GP-Training-HF_yk/train-gp-model.ipynb` shows how to train a GP model to predict a thermophysical property for a given SP dataset and a specified data split (or k-fold). The script `manuscript-databases/GP-Training-HF_yk/train-gp-model.py` shows the same training example but for multiple target properties and multiple SP datasets for a given k-fold. This is accompanied by a short bash script (`manuscript-databases/GP-Training-HF_yk/train-gp-model.sh`) that shows how it is used to generate the averaged performance results shown in the manuscript.
 
 ## References
 ** Mullins, E.; Oldland, R.; Liu, Y. A.; Wang, S.; Sandler, S. I.; Chen, C.-C.; Zwolak, M.; Seavey, K. C. Sigma-Profile Database for using COSMO-Based thermodynamic methods. *Industrial & Engineering Chemistry Research* **2006**, 45 (12), 4389–4415. https://doi.org/10.1021/ie060370h.
