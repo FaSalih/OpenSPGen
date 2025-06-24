@@ -6,8 +6,8 @@ An open source sigma profile generator.
 The pre-print associated with this work is available on ChemRxiv: [Open-Source Generation of Sigma Profiles: Impact of Quantum Chemistry and Solvation Treatment on Machine Learning Performance](https://chemrxiv.org/engage/chemrxiv/article-details/67bc9bf6fa469535b9bb872e).
 
 ## Installation Instructions
-1. Install the open source DFT package `NWChem` without Python support. The version used during the development of this package is `7.0.2` available for download [here](https://github.com/nwchemgit/nwchem/releases/tag/v7.0.2-release)*. Functionality has been tested with later versions (version `7.2.0` to be specific), but consistency of the produced sigma profiles with version `7.0.2` has not been tested.
-2. Add the path of the `nwchem` executable to your `PATH` variable (the `nwchem` executable path should be along the lines of: `User/Desktop/nwchem-7.0.2/bin/LINUX64`)
+1. Install the open source DFT package `NWChem` without Python support. The version used during the development of this package is `7.2.0-beta2` available for download [here](https://github.com/nwchemgit/nwchem/releases/tag/v7.2.0-beta2)*. Functionality has been tested with later versions (version `7.2.0` to be specific), but consistency of the produced sigma profiles with version `7.2.0-beta2` has not been tested.
+2. Add the path of the `nwchem` executable to your `PATH` variable (the `nwchem` executable path should be along the lines of: `User/Desktop/nwchem-7.2.0-beta2/bin/LINUX64`)
 3. Download the current repository to your local machine.
 4. Create a conda environment where you can install `rdkit` and its dependencies from the provided `yml` file using the following instructions:
    ```
@@ -18,12 +18,12 @@ The pre-print associated with this work is available on ChemRxiv: [Open-Source G
    conda env create -n spg-env --file spg.yml
    ```
 5. Add the location of the `Python` directory to your device's path variable.
-6. Run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz).
+6. Run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz). *You may need to edit the environment section of the script before running tests.*
    ```
    ./run-tests.sh
    ```
 
-6. To run future jobs, either copy the `Python` folder into your working directory or add the path where it was installed to your `PATH` variable.
+6. To run future jobs, either copy the `Python` folder into your working directory or add the path where it was installed (`<SPG-installation-path>/Python/`) to your `PATH` variable.
 
 *Note: Because the DFT software used in this package is only available for Linux and macOS distributions, the complete tool can only be run and should be installed on those machines. 
 

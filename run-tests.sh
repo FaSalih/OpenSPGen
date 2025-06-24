@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## ----------------------------------------------------------
-# This file runs aset of example jobs for Methane with different 
+# This file runs a set of example jobs for Methane with different 
 # input formats and options
 
 ## ----------------------------------------------------------
@@ -10,7 +10,7 @@ export OMP_NUM_THREADS=${NSLOTS}
 module purge
 conda deactivate
 conda activate spg-env
-module load nwchem/7.2
+module load nwchem/7.2  # may not be necessary/correct, if nwchem is locally installed
 
 ## ----------------------------------------------------------
 ## Set up all test parameters
