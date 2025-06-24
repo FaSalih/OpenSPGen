@@ -1,4 +1,4 @@
-# SPG
+# OpenSPGen
 An open source sigma profile generator.
 
 ![plot](./imgs/workflow.png)
@@ -12,7 +12,7 @@ The pre-print associated with this work is available on ChemRxiv: [Open-Source G
 4. Create a conda environment where you can install `rdkit` and its dependencies from the provided `yml` file using the following instructions:
    ```
    # Go to the directory where the repository was installed
-   cd <SPG-installation-path>
+   cd <OpenSPGen-installation-path>
    cd Python
    # Create a conda environment for all the dependencies
    conda env create -n spg-env --file spg.yml
@@ -23,7 +23,7 @@ The pre-print associated with this work is available on ChemRxiv: [Open-Source G
    ./run-tests.sh
    ```
 
-6. To run future jobs, either copy the `Python` folder into your working directory or add the path where it was installed (`<SPG-installation-path>/Python/`) to your `PATH` variable.
+6. To run future jobs, either copy the `Python` folder into your working directory or add the path where it was installed (`<OpenSPGen-installation-path>/Python/`) to your `PATH` variable.
 
 *Note: Because the DFT software used in this package is only available for Linux and macOS distributions, the complete tool can only be run and should be installed on those machines. 
 
