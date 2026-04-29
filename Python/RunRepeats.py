@@ -27,11 +27,11 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--idtype",required=True,  help="Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, mol2, or xyz (Not case sensitive, but must include separators like `-`). This argument is required.")
 parser.add_argument("--id", required=True, help="Molecule identifier. This argument is required.")
 parser.add_argument("--charge", help="Molecule charge. Default is None and will be calculated later on using `rdkit.Chem.rdmolops`.")
-parser.add_argument("--initialxyz", help="Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' or 'None' for a random conformer.")
+parser.add_argument("--initialxyz", help="Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' or 'None' for a random conformer. Default is 5 random starting geometries.")
 parser.add_argument("--preoptimize", help="Pre-optimize the molecule using a standard forcefield (MMFF94). Options: True or False. Only available if a `mol2` idtype is provided.")
 parser.add_argument("--name", help="Tail for the job name. Default is `UNK`.")
 parser.add_argument("--nslots", help="Number of cores/threads to use for NWChem calculations. Default is 4.")
-parser.add_argument("--njobs", help="Number of repeat jobs to be run. Default is 1.")
+parser.add_argument("--njobs", help="Number of repeat jobs to be run. Default is 5 jobs with different random seeds to allow conformer sampling.")
 parser.add_argument("--noautoz", help="NWChem setting to disable use of internal coordinates. Default is False.")
 parser.add_argument("--iodine", help="The molecule contains an iodine atom. Default is False.")
 
@@ -49,7 +49,7 @@ doCOSMO=True
 cleanOutput=True        # delete auxiliary NWChem files (e.g. job_name.movecs, job_name.drv.hess, job_name.db)
 removeNWOutput=True     # delete NWChem output file
 generateFinalXYZ=True   # generate xyz file for final optimized geometry
-generateOutputSummary=True      # generate output summary file (includes energies from last optimization step)
+generateOutputSummary=True     # generate output summary file (includes energies from last optimization step)
 avgRadius=None                  # averaging radius for converting sigma surface to sigma profile
 sigmaBins=[-0.250,0.250,0.001]  # charge density bins. The range here is larger than needed to prevent jobs from crashing
 
@@ -218,11 +218,11 @@ def parseUserArgs(userArgs):
         'idtype': 'SMILES',
         'id': None,
         'charge': None,
-        'initialxyz': None,
+        'initialxyz': 'Random',
         'preoptimize': False,
         'name': 'UNK',
         'nslots': 4,
-        'njobs': 1,
+        'njobs': 5,
         'noautoz': False,
         'iodine': False
     }
@@ -366,7 +366,7 @@ def parseUserArgs(userArgs):
                 identifier=userArgs.id
 
     elif userArgs.initialxyz in ['Random', 'Rand']:
-        print(f'\n\tUsing random initial Geometry.')
+        print(f'\n\tUsing random initial geometry with random seed/s: {randomSeeds}.')
         initialXYZ='Random'
         # Check if identifier was provided
         if userArgs.id is None:
