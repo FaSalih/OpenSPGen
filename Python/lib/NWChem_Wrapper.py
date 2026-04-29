@@ -251,6 +251,7 @@ def readOutput(outputPath,doCOSMO=True):
             # Set COSMO-related outputs to None
             surfaceArea=None
             segmentAreas=None
+            segAtoms=None
         # Skip three lines
         for __ in range(3): file.readline()
         # Retrieve final coordinates
