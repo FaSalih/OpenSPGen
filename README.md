@@ -5,59 +5,57 @@ An open source sigma profile generator.
 
 The journal article associated with this work is available on DigitalDiscovery:[Open-source generation of sigma profiles: impact of quantum chemistry and solvation treatment on machine learning performance](https://pubs.rsc.org/en/content/articlelanding/2025/dd/d5dd00087d). Along with an earlier pre-print on [ChemRxiv](https://chemrxiv.org/engage/chemrxiv/article-details/67bc9bf6fa469535b9bb872e).
 
-## Installation Instructions 
+## Installation Instructions
 
-**Notes on Compatibility**: 
-- Because the DFT software used in this package is only available for Linux and macOS distributions, the complete tool can only be run and should be installed on those machines. 
+**Notes on Compatibility**:
+- The Python dependencies can be installed on Windows, macOS, and Linux using `requirements.txt`.
+- Complete sigma-profile generation also requires the `nwchem` executable to be available on your `PATH`. The provided conda environment files include Linux-specific dependencies, so they are intended for Linux installations. On macOS or Windows, install NWChem separately and then use `requirements.txt` for the Python dependencies. On Windows, running NWChem through WSL or another Linux-compatible environment is recommended.
+- The version of NWChem used during the development of this package is `7.2.0-beta2`, available for download [here](https://github.com/nwchemgit/nwchem/releases/tag/v7.2.0-beta2)*. Functionality has been tested with later versions (`7.2.*` and `7.3.*`), but consistency of the produced sigma profiles with version `7.2.0-beta2` has not been tested and should not be expected.
 
-- The version of NWChem used during the development of this package is `7.2.0-beta2` available for download [here](https://github.com/nwchemgit/nwchem/releases/tag/v7.2.0-beta2)*. Functionality has been tested with later versions (versions `7.2.*` and `7.3.0` to be specific), but consistency of the produced sigma profiles with version `7.2.0-beta2` has not been tested and is not expected.
+### 1) Cross-Platform Python Dependencies
 
-### 1) Through `conda` (Preferred)
-
-These instructions are for a user who would like all functionalities to be present within the same conda environment. Here, NWChem along with the necessary python dependencies are installed through conda from an environment file using the following instructions:
+These instructions install the Python dependencies from `requirements.txt`. Use this route on Windows, macOS, or Linux when you already have NWChem installed separately, or when the Linux-specific conda environment file does not work on your machine.
 
    ```
    cd <OpenSPGen-installation-path>
-   # Create a conda environment for all the dependencies
-   conda env create -n spg-env --file Python/spg-7.3.yml
-   ```
-   Installing with the .yml file is preferred for reproducibility of results. If it failed on your device, linux dependencies could be excluded by replacing the line of conda environment creation with the following block:
-   ```
-   conda create -n spgen python=3.10
-   # Install required packages
+   conda create -n spg-env python=3.10
+   conda activate spg-env
    pip install -r requirements.txt
    ```
-   and accept all prompts in the terminal
-Then, you can run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz). *You may need to edit the environment section of the script before running tests.*
+
+Then, add the folder containing the main Python scripts (`<OpenSPGen-installation-path>/Python`) to your `PATH` variable.
+
+### 2) Linux Conda Environment with NWChem
+
+These instructions are for Linux users who would like NWChem and the Python dependencies installed in the same conda environment. The `.yml` file includes Linux-specific packages and should not be used for Windows or macOS installations.
+
    ```
-   ./run-tests.sh
+   cd <OpenSPGen-installation-path>
+   conda env create -n spg-env --file Python/spg-7.3.yml
+   conda activate spg-env
    ```
 
-**Note**: This will install NWChem v 7.3.0, as well as more recent versions of RDKit and Python. As such, the software installed by these 2 methods should complete jobs successfully, but should not be expected to produce the same sigma profiles as previous versions of OpenSPGen or the same sigma profiles published in the accompanying journal article.
+**Note**: The current `Python/spg-7.3.yml` file installs NWChem `7.3.0`, along with newer versions of RDKit and Python than those used for the original manuscript calculations. Jobs should complete successfully, but the generated sigma profiles should not be expected to match previous versions of OpenSPGen or the sigma profiles published in the accompanying journal article.
 
-### 2) With Existing/Separate NWChem Installation
+### 3) With Existing/Separate NWChem Installation
 
-These instructions are for the case where the user has an existing NWChem installation (has to be at least version `7.2.0` or higher) or a the user would like to install NWChem with specific build instructions (the basic build is sufficient for this package).
+Use these instructions if you already have NWChem installed, if you need a custom NWChem build, or if you are installing on macOS or Windows.
 
-1. Install the open source DFT package `NWChem` without Python support (note the compatible versions listed below).
-2. Add the path of the `nwchem` executable to your `PATH` variable (the `nwchem` executable path should be along the lines of: `User/Desktop/nwchem-7.2.0-beta2/bin/LINUX64`)
+1. Install the open source DFT package `NWChem` without Python support. OpenSPGen requires NWChem version `7.2.0` or higher.
+2. Add the path of the `nwchem` executable to your `PATH` variable. On Linux, the executable path is usually similar to `User/Desktop/nwchem-7.2.0-beta2/bin/LINUX64`.
 3. Download the current repository to your local machine.
-4. Add the path of the folder containing main python script (`<OpenSPGen-installation-path>/Python`) to your `PATH` variable.
-5. Create a conda environment where you can install `rdkit` and its dependencies from the provided `yml` file using the following instructions:
+4. Add the path of the folder containing the main Python scripts (`<OpenSPGen-installation-path>/Python`) to your `PATH` variable.
+5. Install the Python dependencies:
 
    ```
    cd <OpenSPGen-installation-path>
-   # Create a conda environment for all the dependencies
-   conda env create -n spg-env --file Python/spg-7.3.yml
-   ```
-   Installing with the .yml file is preferred for reproducibility of results. If it failed on your device, linux dependencies could be excluded by replacing the line of conda environment creation with the following block:
-   ```
-   conda create -n spgen python=3.10
-   # Install required packages
+   conda create -n spg-env python=3.10
+   conda activate spg-env
    pip install -r requirements.txt
    ```
-   and accept all prompts in the terminal.
-7. Run the installation tests (will run a sigma profile generation job for methane with different inputs - a SMILES, a CAS number and a pre-optimized xyz). *You may need to edit the environment section of the script before running tests.*
+
+6. Run the installation tests. These will run sigma-profile generation jobs for methane using different inputs: a SMILES string, a CAS number, and a pre-optimized xyz. *You may need to edit the environment section of the script before running tests. On Windows, run this script from WSL, Git Bash, or another shell that can execute `.sh` files.*
+
    ```
    ./run-tests.sh
    ```
