@@ -508,9 +508,9 @@ def goToLine(file,lineNumber):
     None.
 
     """
-    # Rewind file
+
     file.seek(0)
-    # Initiate loop
+
     for __ in range(lineNumber+1):
         file.readline()
     # Output
