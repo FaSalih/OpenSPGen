@@ -1,9 +1,0 @@
-cirpy==1.0.2
-gpflow==2.10.0
-matplotlib==3.10.8
-numpy==1.26.4
-pandas==2.1.1
-pubchempy==1.0.5
-rdkit==2022.03.5
-scikit_learn==1.7.2
-tqdm==4.67.3
