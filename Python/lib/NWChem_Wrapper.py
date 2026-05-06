@@ -22,8 +22,8 @@ Sections
         . goToLine()
         . findNextOccurrence()
 
-Last edit: 2025-01-29
-Author: Dinis Abranches, Fathya Salih
+Last edit: 2026-04-09
+Author: Dinis Abranches, Fathya Salih, Ching Ting Leung
 """
 
 # =============================================================================
@@ -208,15 +208,18 @@ def readOutput(outputPath,doCOSMO=True):
     with open(outputPath,'r') as file:
         if doCOSMO:
             # Find last occurrence of "-cosmo- solvent"
-            lastOccurrenceLine=findLastOccurrence(file,['-cosmo-','solvent'])
-            # Go to line of last occurrence
-            goToLine(file,lastOccurrenceLine)
-            # Retrieve total number of surface segments 
-            lineSplit=findNextOccurrence(file,'-cosmo-')
-            nSeg=int(lineSplit[-1])
-            # Retrieve total surface area (next line)
-            lineSplit=file.readline().split()
-            surfaceArea=float(lineSplit[-2])
+            file.seek(0)
+            cosmoLineNum = None
+            for i, line in enumerate(file):
+                if '-cosmo-' in line and 'points' in line:
+                    cosmoLineNum = i
+            file.seek(0)
+            for _ in range(cosmoLineNum):
+                file.readline()
+            lineSplit = file.readline().split()
+            nSeg = int(lineSplit[-1])
+            lineSplit = file.readline().split()
+            surfaceArea = float(lineSplit[-2])
             # Initialize list of areas and segment atoms
             segmentAreas=[]
             segAtoms=[]
@@ -505,9 +508,9 @@ def goToLine(file,lineNumber):
     None.
 
     """
-    # Rewind file
+
     file.seek(0)
-    # Initiate loop
+
     for __ in range(lineNumber+1):
         file.readline()
     # Output
