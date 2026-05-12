@@ -60,6 +60,16 @@ Use these instructions if you already have NWChem installed, if you need a custo
    ./run-tests.sh
    ```
 
+
+
+## Comparison of NWChem Versions
+
+The `sp-compare/` folder contains outputs from different versions of NWChem for methane calculations. This includes results from various NWChem versions to compare consistency and differences in sigma profile generation.
+
+A summary of the differences is provided in `sp-compare/comparison_Methane.md`.
+
+
+
 ## Usage Instructions
 
 **Simple usage example**:

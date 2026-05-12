@@ -22,8 +22,8 @@ Sections
         . goToLine()
         . findNextOccurrence()
 
-Last edit: 2026-04-09
-Author: Dinis Abranches, Fathya Salih, Ching Ting Leung
+Last edit: 2025-01-29
+Author: Dinis Abranches, Fathya Salih
 """
 
 # =============================================================================
@@ -254,7 +254,6 @@ def readOutput(outputPath,doCOSMO=True):
             # Set COSMO-related outputs to None
             surfaceArea=None
             segmentAreas=None
-            segAtoms=None
         # Skip three lines
         for __ in range(3): file.readline()
         # Retrieve final coordinates
@@ -508,9 +507,9 @@ def goToLine(file,lineNumber):
     None.
 
     """
-
+    # Rewind file
     file.seek(0)
-
+    # Initiate loop
     for __ in range(lineNumber+1):
         file.readline()
     # Output

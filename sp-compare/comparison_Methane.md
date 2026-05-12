@@ -156,3 +156,10 @@ Number of surface segments assigned to each atom index:
 | 4 | H | 0.000000 | (0.1469, 0.1352, 1.0727) | (0.1469, 0.1352, 1.0727) |
 | 5 | H | 0.000000 | (0.9627, -0.1866, -0.4783) | (0.9627, -0.1866, -0.4783) |
 
+
+## Abbreviations
+nw720: NWChem version 7.2.0
+nw730: NWChem version 7.2.3
+nw73: NWChem version 7.3.0
+ks: COSMO KS (Klamt–Schüürmann) Model
+yk: COSMO YK (York–Karplus) Model
