@@ -98,3 +98,55 @@ Given charge was None, calculated charge: 0
 SP-NoInitXYZ-Mol_Methane_0 finished successfully.
 Wall clock time for this job: 7.5 s
 So far, 1/1 jobs finished.
+
+Processing user arguments...
+	No initial geometry provided. Will use a random conformer.
+	Identifier type was provided: SMILES
+	Pre-optimizaion using MMFF of a random geometry is set to: True
+
+Initializing serial task...
+	Main folder: /users/cleung2/OpenSPGen-master/sp-compare/nw73_ks/SP-NoInitXYZ-Mol_Methane
+	Number of threads per job: 4
+	NWChem configuration file: COSMO_HF_SVP
+	Do COSMO: True
+	Averaging radius: None
+	Sigma bins: [-0.25, 0.25, 0.001]
+Initialization complete.
+
+Given charge was None, calculated charge: 0
+
+NaN value encountered in sigma matrix, segment number 1...
+Job failed for molecule: SP-NoInitXYZ-Mol_Methane_0
+The following errors were detected:
+
+Exception type : ValueError 
+Exception message : NaN value encountered in sigma matrix...
+Stack trace:
+  File: /users/cleung2/OpenSPGen-master/Python/RunRepeats.py, line 105, in call_generateSP
+    warning=sp.generateSP(entry[1],jobFolder,np_NWChem,configFile,
+  File: /users/cleung2/OpenSPGen-master/Python/lib/spGenerator.py, line 215, in generateSP
+    sigmaMatrix,avgSigmaMatrix=getSigmaMatrix(segmentCoordinates,
+  File: /users/cleung2/OpenSPGen-master/Python/lib/spGenerator.py, line 593, in getSigmaMatrix
+    raise ValueError('NaN value encountered in sigma matrix...')
+
+SP-NoInitXYZ-Mol_Methane_0 finished with errors.
+Wall clock time for this job: 4.12 s
+So far, 1/1 jobs finished.
+
+Processing user arguments...
+	No initial geometry provided. Will use a random conformer.
+	Identifier type was provided: SMILES
+	Pre-optimizaion using MMFF of a random geometry is set to: True
+
+Initializing serial task...
+	Main folder: /users/cleung2/OpenSPGen-master/sp-compare/nw73_ks/SP-NoInitXYZ-Mol_Methane
+	Number of threads per job: 1
+	NWChem configuration file: COSMO_HF_SVP
+	Do COSMO: True
+	Averaging radius: None
+	Sigma bins: [-0.25, 0.25, 0.001]
+Initialization complete.
+
+SP-NoInitXYZ-Mol_Methane_0 finished successfully.
+Wall clock time for this job: 4.99 s
+So far, 1/1 jobs finished.
