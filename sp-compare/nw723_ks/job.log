@@ -1,0 +1,36 @@
+
+Processing user arguments...
+	No initial geometry provided. Will use a random conformer.
+	Identifier type was provided: SMILES
+	Pre-optimizaion using MMFF of a random geometry is set to: True
+
+Initializing serial task...
+	Main folder: /users/cleung2/OpenSPGen-master/results/SP-NoInitXYZ-Mol_Methane
+	Number of threads per job: 4
+	NWChem configuration file: COSMO_HF_SVP
+	Do COSMO: True
+	Averaging radius: None
+	Sigma bins: [-0.25, 0.25, 0.001]
+Initialization complete.
+
+SP-NoInitXYZ-Mol_Methane_0 finished successfully.
+Wall clock time for this job: 1096.48 s
+So far, 1/1 jobs finished.
+
+Processing user arguments...
+	No initial geometry provided. Will use a random conformer.
+	Identifier type was provided: SMILES
+	Pre-optimizaion using MMFF of a random geometry is set to: True
+
+Initializing serial task...
+	Main folder: /users/cleung2/OpenSPGen-master/results/SP-NoInitXYZ-Mol_Methane
+	Number of threads per job: 4
+	NWChem configuration file: COSMO_HF_SVP
+	Do COSMO: True
+	Averaging radius: None
+	Sigma bins: [-0.25, 0.25, 0.001]
+Initialization complete.
+
+SP-NoInitXYZ-Mol_Methane_0 finished successfully.
+Wall clock time for this job: 1096.58 s
+So far, 1/1 jobs finished.
