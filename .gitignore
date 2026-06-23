@@ -5,6 +5,7 @@ Python/lib/__pycache__/*
 # Ignore job log files and test files/directories
 *.o*
 test*
+SP-NoInitXYZ*
 
 # Ignore cluster-specific submission example files
 sub-task-array.sh
@@ -15,3 +16,6 @@ Python/RunRepeats_backup.py
 # Ignore python and jupyter cache
 manuscript-databases/GP-Training-HF_yk/.ipynb_checkpoints
 Python/lib/__pycache__/*
+Python/lib/_config/COSMO_HF_SVP_Iodine.config
+Python/lib/_config/COSMO_HF_SVP_noautoz.config
+Python/lib/_config/COSMO_HF_SVP.config
