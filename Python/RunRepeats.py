@@ -41,7 +41,7 @@ args=parser.parse_args()
 # Configuration (fixed options)
 # =============================================================================
 
-# NWChem Config file base name - full config file path is f"Python/lib/_config/{nwchemConfig}"
+# NWChem Config file base name - full config file path is f"Python/lib/_config/{nwchemConfig}.config"
 nwchemConfig='COSMO_HF_SVP'
 # Do COSMO? (= calculate sigma profile, not just sigma surface)
 doCOSMO=True
@@ -218,7 +218,7 @@ def parseUserArgs(userArgs):
         'idtype': 'SMILES',
         'id': None,
         'charge': None,
-        'initialxyz': 'Random',
+        'initialxyz': 'RANDOM',
         'preoptimize': False,
         'name': 'UNK',
         'nslots': 4,
