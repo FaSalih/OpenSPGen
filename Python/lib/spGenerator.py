@@ -17,8 +17,10 @@ Sections
         . getSigmaMatrix()
         . averagingAlgorithm()
         . getSigmaProfile()
+        . extractEnergyProfiles()
+        . extractFinalEnergy()
 
-Last edit: 2026-01-21
+Last edit: 2026-06-23
 Author: Dinis Abranches, Fathya Salih
 """
 
@@ -152,7 +154,7 @@ def generateSP(identifier,jobFolder,np,configFile,
     warning=None
     # If charge or initialXYZ are not provided, retrieve mol SMILES string 
     # (for calculating charge and generating geometry, respectively)
-    if charge is None or initialXYZ in [None, 'Random']:
+    if charge is None or initialXYZ in [None, 'RAND', 'RANDOM']:
         # If identifier is not a SMILES string, obtain a SMILES string
         if identifierType.upper() not in ['SMILES', 'MOL2']: 
             smilesString,warning=crossCheck(identifier,identifierType)
@@ -714,3 +716,175 @@ def getSigmaProfile(sigmaMatrix,sigmaBins):
 
     # Output
     return sigma,sp
+
+def extractEnergyProfiles(output_file, doCOSMO=True):
+    """
+    extract_energies() extracts the energy profiles during different 
+    stages of optimization for plotting.
+
+    Parameters
+    ----------
+    output_file : str
+        path to complete nwchem output file
+    doCOSMO : boolean, optional
+        Whether COSMO-related calculations were requested from NWChem. If TRUE,
+        the function will expect COSMO-related information in the output files
+        of NWCHem and will calculate a sigma profile.
+        The default is True.
+    Returns
+    -------
+    hf_steps : list of floats
+        List containing initial vacuum HF optimization step numbers
+    hf_energies : list of floats
+        List containing initial vacuum HF optimization energies
+    dft_steps : list of floats
+        List containing optimization step numbers fom the vacuum 
+            geometry optimization performed at the desired level of 
+            theory.
+    dft_energies : list of floats
+        List containing energies fom the vacuum geometry optimization 
+            performed at the desired level of theory. Returns list of 
+            nans if no DFT optimization was done in vacuum.
+    cosmo_steps : list of floats
+        List containing optimization step numbers fom the COSMO 
+            geometry optimization performed at the desired level of 
+            theory.
+    cosmo_energies : list of floats
+        List containing energies fom the COSMO geometry optimization 
+            performed at the desired level of theory. Returns list of
+            nans if no COSMO optimization was done.
+    """
+    with open(output_file, 'r') as file:
+        # read lines
+        lines = file.readlines()
+        # Check if DFT occurs or not (number of occurences of "Step   0")
+        all_starts = nwc.findAllOccurrences(file,['Step', '0'])
+
+        if len(all_starts) < 3:
+            no_dft = True
+            start_line_hf = all_starts[0]
+            start_line_cosmo = all_starts[1]
+        else:
+            no_dft = False
+            start_line_hf = all_starts[0]
+            start_line_dft = all_starts[1]
+            start_line_cosmo = all_starts[2]
+
+        # define split of energy table headers to find
+        first_energy_header = '@ Step Energy Delta E Gmax Grms Xrms Xmax Walltime'.split()
+        rest_energy_headers = 'Step Energy Delta E Gmax Grms Xrms Xmax Walltime'.split()
+
+        ## Go to HF section
+        # get HF energy lines
+        first_hf_en_lines = numpy.array(nwc.findAllOccurrences(file,first_energy_header)) + 2
+        rest_hf_en_lines = numpy.array(nwc.findAllOccurrences(file,rest_energy_headers)) + 2
+        all_hf_en_lines = numpy.concatenate((first_hf_en_lines,rest_hf_en_lines))
+        # remove lines not in the range [start_hf,start_dft]
+        if not no_dft:
+            all_hf_en_lines = all_hf_en_lines[all_hf_en_lines < start_line_dft]
+        else:
+            all_hf_en_lines = all_hf_en_lines[all_hf_en_lines < start_line_cosmo]
+        # extract and save energy values
+        hf_energies = []; hf_steps = []
+        for l in all_hf_en_lines:
+            line = lines[l].split()
+            if '@' != line[0]:
+                step += 1
+                E = float(line[1].replace('D', 'E'))
+            else:
+                step = float(line[1])
+                E = float(line[2].replace('D', 'E'))
+            hf_energies.append(E)
+            hf_steps.append(step)
+        # Convert to numpy arrays
+        hf_energies = numpy.array(hf_energies)
+        hf_steps = numpy.array(hf_steps)
+
+        ## Go to DFT section
+        if not no_dft:
+            # get DFT energy lines
+            first_dft_en_lines = numpy.array(nwc.findAllOccurrences(file,first_energy_header)) + 2
+            rest_dft_en_lines = numpy.array(nwc.findAllOccurrences(file,rest_energy_headers)) + 2
+            all_dft_en_lines = numpy.concatenate((first_dft_en_lines,rest_dft_en_lines))
+            # remove lines not in the range [start_dft,start_cosmo]
+            all_dft_en_lines = all_dft_en_lines[all_dft_en_lines < start_line_cosmo]
+            all_dft_en_lines = all_dft_en_lines[all_dft_en_lines >= start_line_dft]
+            # extract energy values
+            dft_energies = []; dft_steps = []
+            for l in all_dft_en_lines:
+                line = lines[l].split()
+                if '@' != line[0]:
+                    step += 1
+                    E = float(line[1].replace('D', 'E'))
+                else:
+                    step = float(line[1])
+                    E = float(line[2].replace('D', 'E'))
+                dft_energies.append(E)
+                dft_steps.append(step)
+            # Convert to numpy arrays
+            dft_energies = numpy.array(dft_energies)
+            dft_steps = numpy.array(dft_steps)
+        else:
+            dft_energies = numpy.zeros_like(hf_energies) * numpy.nan
+            dft_steps = numpy.zeros_like(hf_steps)
+
+        ## Go to COSMO section
+        if doCOSMO:
+            # get COSMO energy lines
+            first_cosmo_en_lines = numpy.array(nwc.findAllOccurrences(file,first_energy_header)) + 2
+            rest_cosmo_en_lines = numpy.array(nwc.findAllOccurrences(file,rest_energy_headers)) + 2
+            all_cosmo_en_lines = numpy.concatenate((first_cosmo_en_lines,rest_cosmo_en_lines))
+            # remove lines not in the range [start_cosmo,end]
+            all_cosmo_en_lines = all_cosmo_en_lines[all_cosmo_en_lines > start_line_cosmo]
+            # extract energy values
+            cosmo_energies = []; cosmo_steps = []
+            for l in all_cosmo_en_lines:
+                line = lines[l].split()
+                if '@' != line[0]:
+                    step += 1
+                    E = float(line[1].replace('D', 'E'))
+                else:
+                    step = float(line[1])
+                    E = float(line[2].replace('D', 'E'))
+                cosmo_energies.append(E)
+                cosmo_steps.append(step)
+            # Convert to numpy arrays
+            cosmo_energies = numpy.array(cosmo_energies)
+            cosmo_steps = numpy.array(cosmo_steps)
+        else:
+            cosmo_energies = numpy.zeros_like(hf_energies) * numpy.nan
+            cosmo_steps = numpy.zeros_like(hf_steps)
+
+    return (hf_steps, hf_energies), (dft_steps, dft_energies), (cosmo_steps, cosmo_energies)
+
+def extractFinalEnergy(output_summary_file):
+    """
+    extract_energies() extracts the energy profiles during different 
+    stages of optimization for plotting.
+
+    Parameters
+    ----------
+    output_summary_file : str
+        path to nwchem output summary file generated by OpenSPGen
+
+    Returns
+    -------
+    final_energy : float
+        last energy printed in the summary file
+    """
+    with open(output_summary_file, 'r') as file:
+        # read lines
+        lines = file.readlines()
+
+        # get lines containing energy header
+        energy_header = 'Step Energy Delta E Gmax Grms Xrms Xmax Walltime'.split()
+        header_lines_idx = numpy.array(nwc.findAllOccurrences(file, energy_header))
+        energy_lines_idx = header_lines_idx + 2
+
+        # loop over lines (should be 1) and save last energy
+        for l in energy_lines_idx:
+            line = lines[l].split()
+            if '@' != line[0]: final_energy = float(line[1].replace('D', 'E'))
+            else: final_energy = float(line[2].replace('D', 'E'))
+
+        return final_energy
