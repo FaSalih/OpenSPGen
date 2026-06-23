@@ -50,7 +50,6 @@ else:
 # define number of conformer jobs to average over and the averaging scheme
 n_confs = int(sys.argv[1])
 avg_scheme = 'arithmetic' # allows: 'arithmetic' or 'boltzmann'
-avg_scheme = 'boltzmann' # allows: 'arithmetic' or 'boltzmann'
 
 # get all job folders existing in working directory
 pattern = os.path.join('.', "SP-RandInitXYZ-Mol*")

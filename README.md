@@ -5,6 +5,8 @@ An open source sigma profile generator.
 
 The journal article associated with this work is available on DigitalDiscovery:[Open-source generation of sigma profiles: impact of quantum chemistry and solvation treatment on machine learning performance](https://pubs.rsc.org/en/content/articlelanding/2025/dd/d5dd00087d). Along with an earlier pre-print on [ChemRxiv](https://chemrxiv.org/engage/chemrxiv/article-details/67bc9bf6fa469535b9bb872e).
 
+A follow-up work addressing how to choose conformations for SP production is available on ChemRxiv: [Randomness is All You Need – Studying the Effect of Molecular Conformation on Sigma Profiles as Machine Learning Features](https://doi.org/10.26434/chemrxiv.15004663/v1)
+
 ## Installation Instructions 
 
 **Notes on Compatibility**: 
@@ -53,12 +55,6 @@ These instructions are for the case where the user has an existing NWChem instal
 
 
 
-## Comparison of NWChem Versions
-
-The `sp-compare/` folder contains outputs from different versions of NWChem for methane calculations. This includes results from various NWChem versions to compare consistency and differences in sigma profile generation.
-
-A summary of the differences is provided in `sp-compare/comparison_Methane.md`.
-
 
 
 ## Usage Instructions
@@ -99,8 +95,10 @@ options:
 - It is not recommended to generate SPs for large molecules or structures with large cycles without a starting initial geometry. All identifier types other than an initial xyz or `mol2` require generating an initial structure from a SMILES string retrieved from PubChem, and the `rdkit.Chem.rdmolfiles.MolFromSmiles()` function is likely to have trouble generating structures with nested cycles (e.g. cucurbiturils or cyclodextrins).
 
 
-## Available Data
+## Available Data & Contents
 This repository is associated with a study on the effect of quantum chemistry on the performance of machine learning models to predict thermophysical properties from sigma profiles. The datasets discussed in that work are available in this repository in the `manuscript-databases` folder. These include:
+
+### Databases & Results
 
 - **Sigma profile databases**: `csv` files including sigma profile databases for 1432 molecules under different levels of theory. The naming indicates the basis set and functional used to generate that dataset (e.g. `sp_functional_basis-set.csv`). 
    - All the sigma profiles in those datasets are unaveraged, except for `sp_mullins_vt-2005.csv`, which contains the sigma profiles published by Mullins (2006)**. These are equivalent to applying the averaging radius of 0.8174 to the unaveraged Mullins dataset `sp_mullins_no_av`.
@@ -112,8 +110,18 @@ This repository is associated with a study on the effect of quantum chemistry on
    - `parity_plots`: parity plots for the performance of different trained models.
    - `performance_per_fold`: `csv` files for the performance of different trained models.
    - *Averaged Performances*: `avg_mae.csv`, `avg_R2.csv`, `std_mae.csv`, `std_R2.csv` are the GP performances averaged over the different training folds.
+- **Comparison of NWChem Versions**: The `sp-compare/` folder contains outputs from different versions of NWChem for methane calculations. This includes results from various NWChem versions to compare consistency and differences in sigma profile generation.
+   
+   A summary of the differences is provided in `sp-compare/comparison_Methane.md`.
+
+### Example & Helper Scripts
+
 - **Example Usage of Pre-trained GP Model**: the notebook `manuscript-databases/deploy_gp_model.ipynb` shows how to use one of the pre-trained GP models to predict a thermophysical property for a given sigma profile. 
 - **Example For Training a GP Model**: the notebook `manuscript-databases/GP-Training-HF_yk/train-gp-model.ipynb` shows how to train a GP model to predict a thermophysical property for a given SP dataset and a specified data split (or k-fold). The script `manuscript-databases/GP-Training-HF_yk/train-gp-model.py` shows the same training example but for multiple target properties and multiple SP datasets for a given k-fold. This is accompanied by a short bash script (`manuscript-databases/GP-Training-HF_yk/train-gp-model.sh`) that shows how it is used to generate the averaged performance results shown in the manuscript.
+- **Plotting NWChem Energy Profiles**: in case a job fails, the full NWChem output file is returned. The script `Python/PlotNwchemEnergies.py` can be used during debugging to plot the energy profiles of different geometry optimization stages (i.e. HF-SVP in vacuum, DFT in vacuum, DFT in COSMO).
+
+- **Combining/Averaging SPs fom Different Conformers**: as the follow-up work published on [ChemRxiv](https://doi.org/10.26434/chemrxiv.15004663/v1) recommends that multiple conformers lead to better ML performance, the script `Python/CombineRandSPs.py` combines multiple conformer SPs using either an arithmetic averaging or Boltzmann averaging scheme. This script will find all OpenSPGen job folders starting with `SP-RandInitXYZ-Mol` in the current directory and combine the SPs in the subfolders to provide a csv of all the random conformer SP jobs in the current directory.
+
 
 ## References
 ** Mullins, E.; Oldland, R.; Liu, Y. A.; Wang, S.; Sandler, S. I.; Chen, C.-C.; Zwolak, M.; Seavey, K. C. Sigma-Profile Database for using COSMO-Based thermodynamic methods. *Industrial & Engineering Chemistry Research* **2006**, 45 (12), 4389–4415. https://doi.org/10.1021/ie060370h.
