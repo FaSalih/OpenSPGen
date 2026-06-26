@@ -278,6 +278,8 @@ def parseUserArgs(userArgs):
             print(f'\n\tInput error:')
             print(f'\n\t\tThe value provided for the "--iodine" argument is invalid. Please provide either "True" or "False".')
             sys.exit(1)
+        else:
+            iodine = True if iodine.lower()=='true' else False
     else:
         iodine=default_options['iodine']
 
