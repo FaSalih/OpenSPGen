@@ -295,7 +295,7 @@ def parseUserArgs(userArgs):
     # Convert initialxyz from string if needed
     if userArgs.initialxyz is not None:
         if userArgs.initialxyz.upper() in ['NONE', None]:
-            initialXYZ=None
+            initialXYZ=userArgs.initialxyz
     else:
         initialXYZ=userArgs.initialxyz
 
