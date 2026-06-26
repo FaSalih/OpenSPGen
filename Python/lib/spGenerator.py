@@ -52,7 +52,7 @@ from lib import NWChem_Wrapper as nwc
 # Main Functions
 # =============================================================================
     
-def generateSP(identifier,jobFolder,np,configFile,
+def generateSP(identifier,jobFolder,np,configFile,logPath,
                identifierType='SMILES',
                charge=None,
                initialXYZ=None,
@@ -95,6 +95,8 @@ def generateSP(identifier,jobFolder,np,configFile,
         NOTE: cannot use np=1.
     configFile : string
         Path to the nwchem configuration file. See /path/to/lib/_config.
+    logPath : string
+            Path to log file.
     identifierType : string, optional
         Type of molecule identifier. One of:
             . 'SMILES'
@@ -170,8 +172,6 @@ def generateSP(identifier,jobFolder,np,configFile,
         molecule=rdk.getInitialConformer(smilesString,randomSeed=randomSeed,xyzPath=xyzPath)
     else: # Copy supplied xyz file to job folder as initialGeometry.xyz
         shutil.copy2(initialXYZ,xyzPath)
-    # Define logPath from jobFolder
-    logPath=os.path.join(Path(jobFolder).parent, "job.log")
     # Get formal charge of molecule
     if charge is None: 
         charge=rdmolops.GetFormalCharge(molecule)

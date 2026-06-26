@@ -27,7 +27,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--idtype",required=True,  help="Molecule identifier type. Options: SMILES, CAS-Number, InChI, InChIKey, mol2, or xyz (Not case sensitive, but must include separators like `-`). This argument is required.")
 parser.add_argument("--id", required=True, help="Molecule identifier. This argument is required.")
 parser.add_argument("--charge", help="Molecule charge. Default is None and will be calculated later on using `rdkit.Chem.rdmolops`.")
-parser.add_argument("--initialxyz", help="Path to initial xyz file for NWChem geometry optimization, if desired. Otherwise, use 'Random' or 'None' for a random conformer. Default is 5 random starting geometries.")
+parser.add_argument("--initialxyz", help="Path to an initial xyz file for NWChem geometry optimization. If omitted, a random-seeded geometry is used.")
 parser.add_argument("--preoptimize", help="Pre-optimize the molecule using a standard forcefield (MMFF94). Options: True or False. Only available if a `mol2` idtype is provided.")
 parser.add_argument("--name", help="Tail for the job name. Default is `UNK`.")
 parser.add_argument("--nslots", help="Number of cores/threads to use for NWChem calculations. Default is 4.")
@@ -97,7 +97,7 @@ def call_generateSP(entry,configFile):
         if not os.path.isabs(initialXYZ_):
             initialXYZ_ = os.path.abspath(initialXYZ_)
     try:
-        warning=sp.generateSP(entry[1],jobFolder,np_NWChem,configFile,
+        warning=sp.generateSP(entry[1],jobFolder,np_NWChem,configFile,logPath,
                               identifierType=identifierType,
                               charge=charge,
                               initialXYZ=initialXYZ_,
@@ -109,6 +109,7 @@ def call_generateSP(entry,configFile):
                               doCOSMO=doCOSMO,
                               avgRadius=avgRadius,
                               sigmaBins=sigmaBins)
+                        
         if warning is not None:
             with open(logPath,'a') as logFile:
                 logFile.write('\nWarning for molecule: '+entry[0])
@@ -121,7 +122,7 @@ def call_generateSP(entry,configFile):
             # Get current system exception
             ex_type, ex_value, ex_traceback = sys.exc_info()
 
-            # Extract unformatter stack traces as tuples
+            # Extract unformatted stack traces as tuples
             trace_back = traceback.extract_tb(ex_traceback)
 
             # Format stacktrace into a readable multiline string
@@ -201,7 +202,7 @@ def parseUserArgs(userArgs):
     charge : float
         Molecule charge.
     initialXYZ : string
-        Path to initial xyz file, if desired. Otherwise, use 'Random' or 'None' for a random conformer.
+        Path to an initial xyz file, if provided. Otherwise, a random-seeded geometry is used.
     preOptimize : boolean
         Pre-optimize the molecule using a standard forcefield (MMFF).
     job_name : string
@@ -292,15 +293,16 @@ def parseUserArgs(userArgs):
     # Random seeds for initial conformer generation
     randomSeeds=[42+nJob for nJob in range(nJobs)]
 
-    # Convert initialxyz from string if needed
-    if userArgs.initialxyz is not None:
-        if userArgs.initialxyz.upper() in ['NONE', None]:
-            initialXYZ=userArgs.initialxyz
+    # Determine whether a supplied initial geometry or a random-seeded geometry should be used
+    if userArgs.initialxyz is None or userArgs.initialxyz.upper() in ['RANDOM', 'RAND']:
+        initialXYZ='Random'
+        useRandomGeometry=True
     else:
         initialXYZ=userArgs.initialxyz
+        useRandomGeometry=False
 
     # Specify full job name
-    if initialXYZ.upper() in ['RANDOM', 'RAND']:
+    if useRandomGeometry:
         job_name=f'SP-RandInitXYZ-Mol_{job_name_tail}'
     else:
         job_name=f'SP-GivenInitXYZ-Mol_{job_name_tail}'
@@ -337,81 +339,42 @@ def parseUserArgs(userArgs):
             with open(logPath,'a') as logFile:
                 logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry was not set. Default for a mol2 input file is: True')
             preOptimize=True
-    elif userArgs.initialxyz is not None:
-        if userArgs.initialxyz.upper() not in ['NONE', 'RANDOM', 'RAND']:
+    elif useRandomGeometry:
+        print(f'\n\tUsing random initial geometry with random seed/s: {randomSeeds}.')
+        if userArgs.id is None:
             with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tUsing provided initial xyz file: {userArgs.initialxyz}')
-            initialXYZ=userArgs.initialxyz
+                logFile.write('\n\tInput error:')
+                logFile.write(f'\n\t\tRandom initial geometry requires providing an "--id" argument with a SMILES, CAS-Number, InChI, or InChIKey identifier.')
+            sys.exit(1)
 
-        # State pre-optimization availability
+        with open(logPath,'a') as logFile:
+            logFile.write('\n\tPre-optimizaion using MMFF of a random generated geometry is set to: True')
+        preOptimize=True
+        identifierType=userArgs.idtype if userArgs.idtype is not None else default_options['idtype']
+        identifier=userArgs.id
+    else:
+        with open(logPath,'a') as logFile:
+            logFile.write(f'\n\tUsing provided initial xyz file: {initialXYZ}')
+
         if userArgs.preoptimize is not None:
             with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry is set by the user to: {userArgs.preoptimize}. This option is only available for mol2 idtypes.')
-            preOptimize=False
-            identifier=userArgs.id
+                logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry is set by the user to: {userArgs.preoptimize}.')
+            preOptimize=userArgs.preoptimize
         else:
             with open(logPath,'a') as logFile:
                 logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry was not set. Default is: {default_options["preoptimize"]}')
             preOptimize=default_options['preoptimize']
-            # Check if identifier was provided
-            if userArgs.id is None:
-                with open(logPath,'a') as logFile:
-                    logFile.write(f'\n\tNo identifier provided and none is needed. Will use assume {default_options["idtype"]} for the "--idtype" and {default_options["id"]} in place of the "--id" argument.')
-                identifierType=default_options['idtype']
-                identifier=default_options['id']
-            else:
-                with open(logPath,'a') as logFile:
-                    logFile.write(f'\n\tIdentifier information is provided but is not needed.')
-                identifierType=userArgs.idtype
-                identifier=userArgs.id
 
-    elif userArgs.initialxyz in ['Random', 'Rand']:
-        print(f'\n\tUsing random initial geometry with random seed/s: {randomSeeds}.')
-        initialXYZ='Random'
-        # Check if identifier was provided
         if userArgs.id is None:
-            # Terminate with an error
             with open(logPath,'a') as logFile:
-                    logFile.write('\n\tInput error:')
-                    logFile.write(f'\n\t\tRandom initial geometry requires providing an "--id" argument with a SMILES, CAS-Number or InChIKey identifier.')
-            sys.exit(1)
+                logFile.write(f'\n\tNo identifier provided. The identifier is not needed for the supplied initial xyz geometry.')
+            identifierType=default_options['idtype']
+            identifier=default_options['id']
         else:
-            # Set pre-optimization to true
             with open(logPath,'a') as logFile:
-                    logFile.write('\n\tPre-optimizaion using MMFF of random generated geometry is set to: True')
-            preOptimize=True
-            # Save identifier
+                logFile.write(f'\n\tIdentifier information is provided but is not needed.')
+            identifierType=userArgs.idtype
             identifier=userArgs.id
-    else:
-        with open(logPath,'a') as logFile:
-                    logFile.write(f'\n\tNo initial geometry provided. Will use a random conformer.')
-        initialXYZ=None
-        # Check if identifier was provided
-        if userArgs.id is None:
-            # Terminate with an error
-            with open(logPath,'a') as logFile:
-                    logFile.write('\n\tInput error:')
-                    logFile.write(f'\n\t\tRandom initial geometry requires providing an "--id" argument with a SMILES, CAS-Number InChI or InChIKey identifier.')
-            sys.exit(1)
-        else:
-            # Check that identifier type was provided
-            if userArgs.idtype is None:
-                # Set to default
-                with open(logPath,'a') as logFile:
-                    logFile.write(f"\n\tIdentifier type was not provided. Defaulting to: {default_options['idtype']}")
-                identifierType=default_options['idtype']
-                # Save identifier
-                identifier=userArgs.id
-            else:
-                with open(logPath,'a') as logFile:
-                    logFile.write(f'\n\tIdentifier type was provided: {userArgs.idtype}')
-                identifierType=userArgs.idtype
-            # Save identifier
-            identifier=userArgs.id
-            # Set pre-optimization to true
-            with open(logPath,'a') as logFile:
-                    logFile.write('\n\tPre-optimizaion using MMFF of a random geometry is set to: True')
-            preOptimize=True
 
     # Create log file
     with open(logPath,'a') as logFile:
