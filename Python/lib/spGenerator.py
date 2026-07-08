@@ -14,9 +14,11 @@ Sections
 
     . Auxiliary Functions
         . crossCheck()
+        . getFragments()
         . getSigmaMatrix()
         . averagingAlgorithm()
         . getSigmaProfile()
+        . combineFragmentSPs()
         . extractEnergyProfiles()
         . extractFinalEnergy()
 
@@ -39,6 +41,7 @@ from pathlib import Path
 
 # Specific
 import numpy
+import pandas
 import cirpy
 import pubchempy
 from rdkit import Chem
@@ -162,265 +165,131 @@ def generateSP(identifier,jobFolder,np,configFile,logPath,
             smilesString,warning=crossCheck(identifier,identifierType)
         else:
             smilesString=identifier
-    # Create path to initial conformer for the molecule
-    xyzPath=os.path.join(jobFolder,'initialGeometry.xyz')
-    if identifierType.upper()=='MOL2': # generate a pre-optimized version of the provided geometry
-        molecule=rdk.moleculeFromMol2(identifier,xyzPath=xyzPath)
-    elif initialXYZ is None: # generate an algorithm-selected conformer
-        molecule=rdk.generateConformer(smilesString,xyzPath=xyzPath)
-    elif initialXYZ == 'Random': # generate a random conformer
-        molecule=rdk.getInitialConformer(smilesString,randomSeed=randomSeed,xyzPath=xyzPath)
-    else: # Copy supplied xyz file to job folder as initialGeometry.xyz
-        shutil.copy2(initialXYZ,xyzPath)
-    # Get formal charge of molecule
-    if charge is None: 
-        charge=rdmolops.GetFormalCharge(molecule)
+    # If SMILES string is for a compound, get all fragments
+    smilesList = getFragments(smilesString)
+    # Save jobFolder before string is split into fragments
+    baseJobFolder=os.path.abspath(str(jobFolder))
+    # Loop over fragments
+    for s, fragSmiles in enumerate(smilesList):
+        # Create job folder for current fragment
+        jobFolder=os.path.join(baseJobFolder,f'fragment_{s}')
+        os.makedirs(jobFolder, exist_ok=True)
         with open(logPath,'a') as logFile:
-            logFile.write('\nGiven charge was None, calculated charge: '+str(charge)+'\n')
-    # Use job folder name as job name
-    name=os.path.basename(os.path.normpath(jobFolder))
-    # Generate NWChem input script
-    inputPath=os.path.join(jobFolder,'input.nw')
-    nwc.buildInputFile(inputPath,configFile,xyzPath,name,charge)
-    # Run NWChem
-    nwc.runNWChem(inputPath,jobFolder,np)
-    # Check that nwchem job converged
-    outputPath=os.path.join(jobFolder,'output.nw')
-    logPath=os.path.join(jobFolder,'..','job.log')
-    converged=nwc.checkConvergence(outputPath)
-    if converged != 1: removeNWOutput=False; generateFinalXYZ=True
-    # Read cosmo.xyz
-    if doCOSMO:
-        cosmoPath=os.path.join(jobFolder,name+'.cosmo.xyz')
-        segmentCoordinates,segmentCharges=nwc.readCOSMO(cosmoPath)
-    # Read output file
-    surfaceArea,segmentAreas,atomCoords,segAtoms=nwc.readOutput(outputPath,doCOSMO)
-    # Generate final XYZ
-    if generateFinalXYZ: 
-        nwc.generateFinalXYZ(atomCoords,
-                             os.path.join(jobFolder,'finalGeometry.xyz'))
-    
-    # Generate output summary
-    if generateOutputSummary: 
-        nwc.generateLastStep(outputPath,
-                             os.path.join(jobFolder,'outputSummary.nw'))
-    # Clean output
-    if cleanOutput:
-        for file in glob.glob(os.path.join(jobFolder,name+'*')):
-            if 'cosmo' not in file: os.remove(file)
-    # Remove NWChem log file
-    if removeNWOutput:
-        os.remove(os.path.join(jobFolder,'output.nw'))
-    # Do COSMO
-    if doCOSMO and converged >= 0:
-        # Get sigmaMatrix
-        sigmaMatrix,avgSigmaMatrix=getSigmaMatrix(segmentCoordinates,
-                                                  segmentCharges,
-                                                  segmentAreas,
-                                                  surfaceArea,
-                                                  segAtoms,
-                                                  avgRadius=avgRadius,
-                                                  logPath=logPath)  
-        # Write non-averaged sigmaMatrix
-        spPath=os.path.join(jobFolder,'sigmaSurface.csv')
-        numpy.savetxt(spPath,
-                      sigmaMatrix,
-                      delimiter=',')        
-        # Get Sigma Profile
-        sigma,sigmaProfile=getSigmaProfile(avgSigmaMatrix,sigmaBins)
-        # Write Sigma Profile
-        spPath=os.path.join(jobFolder,'sigmaProfile.csv')
-        numpy.savetxt(spPath,
-                      numpy.column_stack((sigma,sigmaProfile)),
-                      delimiter=',')
-    # Raise NWChem errors, if any
-    if converged == 0:
-        raise Exception('NWChem job failed to converge in COSMO solvation medium, but converged in vacuum.'
-                        +'\n\tThe full output.nw file along with final configuration will be returned...')
-    elif converged == -1:
-        raise Exception('NWChem job failed to converge in vacuum. Optimization in COSMO solvation medium was not attempted.'
-                        +'\n\tThe full output.nw file along with the final configuration will be returned...')
+            logFile.write(f'\nProcessing fragment {s}/{len(smilesList)} with SMILES: {fragSmiles}')
+        # Create path to initial conformer for the molecule
+        xyzPath=os.path.join(jobFolder,'initialGeometry.xyz')
+        if identifierType.upper()=='MOL2': # generate a pre-optimized version of the provided geometry
+            molecule=rdk.moleculeFromMol2(identifier,xyzPath=xyzPath)
+        elif initialXYZ is None: # generate an algorithm-selected conformer
+            molecule=rdk.generateConformer(fragSmiles,xyzPath=xyzPath)
+        elif initialXYZ == 'Random': # generate a random conformer
+            molecule=rdk.getInitialConformer(fragSmiles,randomSeed=randomSeed,xyzPath=xyzPath)
+        else: # Copy supplied xyz file to job folder as initialGeometry.xyz
+            shutil.copy2(initialXYZ,xyzPath)
+        # Get formal charge of molecule
+        if charge is None: 
+            charge=rdmolops.GetFormalCharge(molecule)
+            with open(logPath,'a') as logFile:
+                logFile.write('\tGiven charge was None, calculated charge: '+str(charge)+'\n')
+        # Use job folder name as job name
+        name=os.path.basename(os.path.normpath(jobFolder))
+        # Generate NWChem input script
+        inputPath=os.path.join(jobFolder,'input.nw')
+        nwc.buildInputFile(inputPath,configFile,xyzPath,name,charge)
+        # Run NWChem
+        nwc.runNWChem(inputPath,jobFolder,np)
+        # Check that nwchem job converged
+        outputPath=os.path.join(jobFolder,'output.nw')
+        converged=nwc.checkConvergence(outputPath)
+        if converged != 1: removeNWOutput=False; generateFinalXYZ=True
+        # Read cosmo.xyz
+        if doCOSMO:
+            cosmoPath=os.path.join(jobFolder,f'{name}.cosmo.xyz')
+            segmentCoordinates,segmentCharges=nwc.readCOSMO(cosmoPath)
+        # Read output file
+        surfaceArea,segmentAreas,atomCoords,segAtoms=nwc.readOutput(outputPath,doCOSMO)
+        # Generate final XYZ
+        if generateFinalXYZ: 
+            nwc.generateFinalXYZ(atomCoords,
+                                os.path.join(jobFolder,'finalGeometry.xyz'))
+        
+        # Generate output summary
+        if generateOutputSummary: 
+            nwc.generateLastStep(outputPath,
+                                os.path.join(jobFolder,'outputSummary.nw'))
+        # Clean output
+        if cleanOutput:
+            for file in glob.glob(os.path.join(jobFolder,name+'*')):
+                if 'cosmo' not in file: os.remove(file)
+        # Remove NWChem log file
+        if removeNWOutput:
+            os.remove(outputPath)
+        # Do COSMO
+        if doCOSMO and converged >= 0:
+            # Get sigmaMatrix
+            sigmaMatrix,avgSigmaMatrix=getSigmaMatrix(segmentCoordinates,
+                                                    segmentCharges,
+                                                    segmentAreas,
+                                                    surfaceArea,
+                                                    segAtoms,
+                                                    avgRadius=avgRadius,
+                                                    logPath=logPath)  
+            # Write non-averaged sigmaMatrix
+            spPath=os.path.join(jobFolder,f'sigmaSurface.csv')
+            numpy.savetxt(spPath,
+                        sigmaMatrix,
+                        delimiter=',')        
+            # Get Sigma Profile
+            sigma,sigmaProfile=getSigmaProfile(avgSigmaMatrix,sigmaBins)
+            # Write Sigma Profile
+            spPath=os.path.join(jobFolder,f'sigmaProfile.csv')
+            numpy.savetxt(spPath,
+                        numpy.column_stack((sigma,sigmaProfile)),
+                        delimiter=',')
+        # Raise NWChem errors, if any
+        if converged == 0:
+            raise Exception('NWChem job failed to converge in COSMO solvation medium, but converged in vacuum.'
+                            +'\n\tThe full output.nw file along with final configuration will be returned...')
+        elif converged == -1:
+            raise Exception('NWChem job failed to converge in vacuum. Optimization in COSMO solvation medium was not attempted.'
+                            +'\n\tThe full output.nw file along with the final configuration will be returned...')
+
+    # Combine fragment sigma profiles, if needed
+    if len(smilesList) > 1:
+        spPath=os.path.join(baseJobFolder,f'sigmaProfile.csv')
+        sigma,combSP=combineFragmentSPs(baseJobFolder,len(smilesList),sigmaBins)
+        numpy.savetxt(spPath,numpy.column_stack((sigma,combSP)),
+                                delimiter=',')
+    else:
+        # no combination required, copy files as they are
+        sourcePaths=[]
+        targetPaths=[]
+        if not removeNWOutput: 
+            sourcePaths =+ os.path.join(jobFolder,'output.nw')
+            targetPaths =+ os.path.join(baseJobFolder,'output.nw')
+        if generateFinalXYZ:
+            sourcePaths =+ os.path.join(jobFolder,'finalGeometry.xyz')
+            targetPaths =+ os.path.join(baseJobFolder,'finalGeometry.xyz')
+        if doCOSMO:
+            sourcePaths =+ [
+                os.path.join(jobFolder,f'{name}.cosmo.xyz'),
+                os.path.join(jobFolder,'sigmaSurface.csv'),
+                os.path.join(jobFolder,'sigmaProfile.csv'),
+            ]
+            targetPaths =+ [
+                os.path.join(baseJobFolder,f'{name}.cosmo.xyz'),
+                os.path.join(baseJobFolder,'sigmaSurface.csv'),
+                os.path.join(baseJobFolder,'sigmaProfile.csv'),
+            ]
+        if generateOutputSummary: 
+            sourcePaths =+ os.path.join(jobFolder,'outputSummary.nw')
+            targetPaths =+ os.path.join(baseJobFolder,'outputSummary.nw')           
+        for sourcePath, targetPath in zip(sourcePaths,targetPaths):
+            shutil.copy2(sourcePath,targetPath)
+
     # Output
     return warning
 
-def benchmarkPerformance(logPath,nRepetitions,npList,
-                         # args passed to generateSP():
-                         identifier,configFile,
-                         identifierType='SMILES',
-                         charge=None,
-                         initialXYZ=None,
-                         randomSeed=42,
-                         cleanOutput=True,
-                         removeNWOutput=True,
-                         generateFinalXYZ=True,
-                         generateOutputSummary=True,
-                         doCOSMO=True,
-                         avgRadius=0.5,
-                         sigmaBins=[-0.250,0.250,0.001]):
-    """
-    benchmarkPerformance() benchmarks the performance of generateSP()) as a
-    function of the number of threads used. For each np in npList, the function
-    calls generateSP() and registers its execution time. The benchmarks are
-    performed inside the temporary folder of the package and all scratch and
-    final files are removed. Order of npList and repetitions is shuffled to
-    prevent biased results due to temporary CPU underperformance.
-    
-    Parameters
-    ----------
-    logPath : string
-        Path to the output file.
-    nRepetitions : int
-        Number of times to repeat a benchmark for a given np.
-        Useful for reproducibility.
-    npList : list of ints
-        List where each entry is a number of threads to benchmark.
-        NOTE: cannot use np=1.
-    **See generateSP() for remaining input arguments.
-
-    Returns
-    -------
-    None.
-
-    """
-    # Create log file
-    with open(logPath,'w') as logFile:
-        logFile.write('Log file from benchmarkSingleRun().\n\n')
-        logFile.write('Identifier: '+identifier+'\n\n')
-        logFile.write('Results (np,t):'+'\n')
-    # Generate new npList including number of repetitions
-    npList=nRepetitions*npList
-    # Shuffle list
-    random.shuffle(npList)
-    # Loop over number of threads to time
-    for np in npList:
-        # Generate random name for temporary folder
-        randomName=secrets.token_hex(15)
-        # Create temporary folder inside master temporary folder
-        tempPath=os.path.join(os.path.dirname(__file__),'_temp',randomName)
-        os.makedirs(tempPath)
-        # Register time
-        t1=time.time()
-        # Call generateSP()
-        generateSP(identifier,tempPath,np,configFile,
-                   identifierType=identifierType,
-                   charge=charge,
-                   initialXYZ=initialXYZ,
-                   randomSeed=randomSeed,
-                   cleanOutput=cleanOutput,
-                   removeNWOutput=removeNWOutput,
-                   generateFinalXYZ=generateFinalXYZ,
-                   generateOutputSummary=generateOutputSummary,
-                   doCOSMO=doCOSMO,
-                   avgRadius=avgRadius,
-                   sigmaBins=sigmaBins)
-        # Get elapsed time
-        t=str(round(time.time()-t1,2))
-        # Update log file
-        with open(logPath,'a') as logFile: logFile.write('\n'+str(np)+','+t)
-        # Delete temporary folder
-        shutil.rmtree(tempPath)
-    # Output
-    return None
-
-def benchmarkTessellation(jobFolder,tessellation,
-                          # args passed to generateSP():
-                          identifier,np,configFile,
-                          identifierType='SMILES',
-                          charge=None,
-                          initialXYZ=None,
-                          randomSeed=42,
-                          cleanOutput=True,
-                          removeNWOutput=True,
-                          generateFinalXYZ=True,
-                          generateOutputSummary=True,
-                          doCOSMO=True,
-                          avgRadius=0.5,
-                          sigmaBins=[-0.250,0.250,0.001]):
-    """
-    benchmarkTessellation() benchmarks the impact of tessellation on 
-    generateSP(). For each tessellation level in "tesselation", the function
-    calls generateSP(). The benchmarks are performed inside the temporary
-    folder folder of the package and main results are stored in "jobFolder".
-    A log file is provided. Note that the function makes a copy of configFile
-    and changes its tessellation-related keywords throughout the run.
-    
-    Parameters
-    ----------
-    jobFolder : string
-        Path to the folder where intermediate and final results are stored.
-    tessellation : list of tuples
-        List where each entry is a tessellation level to be tried. Each entry
-        is a tuple; the first entry of the tuple is the NWChem ificos keyword
-        while the second entry is the NWCHem minbem keyword.
-    npList : list of ints
-        List where each entry is a number of threads to benchmark.
-        NOTE: cannot use np=1.
-    **See generateSP() for remaining input arguments.
-
-    Returns
-    -------
-    None.
-
-    """
-    logPath=os.path.join(jobFolder,'log.out')
-    with open(logPath,'w') as logFile:
-        logFile.write('Log file from benchmarkTessellation().\n\n')
-        logFile.write('Identifier: '+identifier+'\n\n')
-        logFile.write('Any errors will be printed below.\n')
-    # Loop over tessellation
-    for tess in tessellation:
-        # Generate random name for new config file
-        randomName=secrets.token_hex(15)
-        newConfigPath=os.path.join(os.path.dirname(__file__),
-                                   '_temp',
-                                   randomName+'.config')
-        # Open base config file
-        with open(configFile,'r') as originalFile:
-            # Open new config file
-            with open(newConfigPath,'w') as newFile:
-                # Loop over original file
-                for line in originalFile:
-                    if 'minbem' in line.split(): # Change minbem
-                        newFile.write('  minbem '+str(tess[1])+'\n')
-                    elif 'ificos' in line.split(): # Change ificos
-                        newFile.write('  ificos '+str(tess[0])+'\n')
-                    else: # Copy line
-                        newFile.write(line)
-        # Generate random name for temporary folder
-        randomName=secrets.token_hex(15)
-        # Create temporary folder inside master temporary folder
-        tempFolder=os.path.join(os.path.dirname(__file__),'_temp',randomName)
-        os.makedirs(tempFolder)
-        # Call generateSP() with error handling
-        try:
-            generateSP(identifier,tempFolder,np,newConfigPath,
-                       identifierType=identifierType,
-                       charge=charge,
-                       initialXYZ=initialXYZ,
-                       randomSeed=randomSeed,
-                       cleanOutput=cleanOutput,
-                       removeNWOutput=removeNWOutput,
-                       generateFinalXYZ=generateFinalXYZ,
-                       generateOutputSummary=generateOutputSummary,
-                       doCOSMO=doCOSMO,
-                       avgRadius=avgRadius,
-                       sigmaBins=sigmaBins)
-        except Exception as error:
-            with open(logPath,'a') as logFile:
-                logFile.write('\nError for tessellation tuple: '
-                              +str(tess)
-                              +'\n')
-                logFile.write(str(error)+'\n')
-        # Copy sigma profile file to jobFolder
-        shutil.copy2(os.path.join(tempFolder,'sigmaProfile.csv'),
-                     os.path.join(jobFolder,
-                                  str(tess[0])+'_'+str(tess[1])+'.csv'))
-        # Delete temporary folder and config file
-        shutil.rmtree(tempFolder)
-        os.remove(newConfigPath)
-    # Output
-    return None
-    
 # =============================================================================
 # Auxiliary Functions
 # =============================================================================
@@ -508,6 +377,41 @@ def crossCheck(identifier,identifierType):
         smilesString=smilesString_2
     # Output
     return smilesString,warning
+
+def getFragments(smilesString):
+    """
+    getFragments() checks if the SMILES string of a compound represents a compound
+    with fragments like a salt or a mixture (e.g. [Cl-].[Cl-].[F-].[Fe+3]). A list
+    of SMILES strings is returned, even if the molecule contains only 1 fragment.
+
+    Parameters
+    ----------
+    smilesString : string
+        SMILES string of the molecule.
+
+    Raises
+    ------
+    ValueError
+        ValueError is raised if the provided SMILES string is invalid.
+
+    Returns
+    -------
+    smilesList : List, string
+        List of SMILES strings of each fragment in the molecule/compound.
+    """
+    # Parse SMILES safely
+    mol = Chem.MolFromSmiles(smilesString)
+    if mol is None:
+        raise ValueError("Invalid SMILES string provided.")
+
+    # Get fragments as tuple of molecule objects
+    fragments = rdmolops.GetMolFrags(mol, asMols=True)
+
+    # Convert fragments/Mol objects to SMILES strings
+    smilesList = [Chem.MolToSmiles(frag) for frag in fragments]
+
+    return smilesList
+
     
 def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,segAtoms,
                    avgRadius=None,logPath=None):
@@ -717,10 +621,51 @@ def getSigmaProfile(sigmaMatrix,sigmaBins):
     # Output
     return sigma,sp
 
+def combineFragmentSPs(baseJobFolder, nFragments, sigmaBins):
+    """
+    Combine SPs from different fragments.
+
+    Parameters
+    ----------
+    baseJobFolder : os.path object
+        Path to base folder outside the fragment job folders
+    nFragments : int
+        Number of fragments in provided identifier SMILES string
+    sigmaBins : list of floats
+        List containing information about the binning procedure for the
+        sigma profile:
+            sigmaBins[0] - Central coordinate of the first bin
+            sigmaBins[1] - Central coordinate of the last bin
+            sigmaBins[2] - Step between the centers of each bin
+
+    Returns
+    -------
+    sigma : list of floats
+        List containing the sigma bins (e/Ang^2)
+    sp_comb : list of floats
+        List containing the combined sigma profile values for each sigma
+        bin (Ang^2).
+    """
+    sigma=numpy.arange(sigmaBins[0],sigmaBins[1]+sigmaBins[2],sigmaBins[2])
+    nbins=len(sigma)
+    # initialize array for all fragemnt SPs
+    sp_arr = numpy.zeros((nbins,nFragments))
+    # loop over fragments
+    for s in range(nFragments):
+        # get job folder for current fragment
+        jobFolder = os.path.join(baseJobFolder,f'fragment_{s}')
+        # read fragment SP
+        sp_file = os.path.join(jobFolder,'sigmaProfile.csv')
+        sp_frag = pandas.read_csv(sp_file, header=None).to_numpy()
+        sp_arr[:,s] = sp_frag[:,1]
+    # average/combine different fragment SPs
+    sp_comb = numpy.mean(sp_arr, axis=1)  
+    return sigma,sp_comb
+
 def extractEnergyProfiles(output_file, doCOSMO=True):
     """
-    extract_energies() extracts the energy profiles during different 
-    stages of optimization for plotting.
+    extract_energies() extracts the energy profiles from the complete
+    output.nw file during different stages of optimization for plotting.
 
     Parameters
     ----------
@@ -859,8 +804,8 @@ def extractEnergyProfiles(output_file, doCOSMO=True):
 
 def extractFinalEnergy(output_summary_file):
     """
-    extract_energies() extracts the energy profiles during different 
-    stages of optimization for plotting.
+    extract_energies() extracts the final DFT/COSMO energy from the
+    output summary file.
 
     Parameters
     ----------
