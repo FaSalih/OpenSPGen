@@ -93,7 +93,7 @@ def call_generateSP(entry,configFile):
     # Get initial xyz
     initialXYZ_=initialXYZ
     # if initialXYZ_ is provided, convert relative to absolute path:
-    if initialXYZ_ not in [None, 'Random']: 
+    if initialXYZ_ not in [None, 'Random']:
         if not os.path.isabs(initialXYZ_):
             initialXYZ_ = os.path.abspath(initialXYZ_)
     try:
@@ -109,6 +109,7 @@ def call_generateSP(entry,configFile):
                               doCOSMO=doCOSMO,
                               avgRadius=avgRadius,
                               sigmaBins=sigmaBins)
+
         if warning is not None:
             with open(logPath,'a') as logFile:
                 logFile.write('\nWarning for molecule: '+entry[0])
@@ -363,7 +364,15 @@ def parseUserArgs(userArgs):
 
         if userArgs.id is None:
             with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tNo identifier provided. The identifier is not needed for the supplied initial xyz geometry.')
+                logFile.write(f'\n\tNo identifier provided. Either an identifier or charge are needed for the supplied initial xyz geometry.')
+            # Check if charge is provided
+            if charge is None:
+                with open(logPath,'a') as logFile:
+                    logFile.write(f'\n\tNo identifier or charge are needed for the supplied initial xyz geometry.')
+                    logFile.write('\n\tInput error:')
+                    logFile.write(f'\n\t\tUsing a provided initial xyz geometry requires providing either a charge through the "--charge" argument '\
+                                  + 'or an "--id" argument with a SMILES, CAS-Number, InChI, or InChIKey identifier to allow calculating charge.')
+                sys.exit(1)
             identifierType=default_options['idtype']
             identifier=default_options['id']
         else:
