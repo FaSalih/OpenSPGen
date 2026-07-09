@@ -21,6 +21,7 @@ Sections
         . combineFragmentSPs()
         . extractEnergyProfiles()
         . extractFinalEnergy()
+        . printMessage()
 
 Last edit: 2026-06-23
 Author: Dinis Abranches, Fathya Salih
@@ -157,14 +158,19 @@ def generateSP(identifier,jobFolder,np,configFile,logPath,
     """
     # Initialize warning
     warning=None
-    # If identifier is not a SMILES string, obtain a SMILES string
-    if identifierType.upper() not in ['SMILES', 'MOL2']: 
-        smilesString,warning=crossCheck(identifier,identifierType)
+    # If identifier is not a SMILES string, retrieve a SMILES string
+    if identifierType.upper() != 'SMILES':
+        # if structure file is provided with charge, no SMILES string is needed
+        if identifierType.upper() in ['MOL2', 'XYZ']:
+            smilesString="Placeholder"
+        else:
+            smilesString,warning=crossCheck(identifier,identifierType)
     else:
         smilesString=identifier
-    # If SMILES string is for a compound, get all fragments
-    smilesList = getFragments(smilesString)
-    # If initialXYZ or mol2 is provided. Replace fragmented SMILES with 
+    # If SMILES string is not a placeholder for XYZs, get all compound fragments
+    if smilesString != "Placeholder": 
+        smilesList = getFragments(smilesString)
+    # If initialXYZ or mol2 is provided. Replace SMILES fragment list with 
     # compound SMILES string (e.g. an ion with a specific coordination env)
     if initialXYZ.upper() not in [None, 'RAND', 'RANDOM']:
         smilesList = [smilesString]
@@ -176,8 +182,7 @@ def generateSP(identifier,jobFolder,np,configFile,logPath,
         # Create job folder for current fragment
         jobFolder=os.path.join(baseJobFolder,f'fragment_{s}')
         os.makedirs(jobFolder, exist_ok=True)
-        with open(logPath,'a') as logFile:
-            logFile.write(f'\nProcessing fragment {s}/{nFragments} with SMILES: {fragSmiles}')
+        printMessage(logPath,f'\nProcessing fragment {s+1}/{nFragments} with SMILES: {fragSmiles}')
         # Create path to initial conformer for the molecule
         xyzPath=os.path.join(jobFolder,'initialGeometry.xyz')
         if identifierType.upper()=='MOL2': # generate a pre-optimized version of the provided geometry
@@ -191,18 +196,15 @@ def generateSP(identifier,jobFolder,np,configFile,logPath,
         # If SMILES contains > 1 fragment, calculate charge per fragment
         if nFragments > 1: 
             charge=rdmolops.GetFormalCharge(molecule)
-            with open(logPath,'a') as logFile:
-                logFile.write('\tCalculated charge for fragment: '+str(charge)+'\n')
+            printMessage(logPath,'\tCalculated charge for fragment: '+str(charge)+'\n')
         else: # check if charge is provided for single molecule/complex
             if charge is None:
                 # initialize molecule from SMILES and calculate charge
                 molecule=rdk.getInitialConformer(fragSmiles,randomSeed=randomSeed,xyzPath=xyzPath)
                 charge=rdmolops.GetFormalCharge(molecule)
-                with open(logPath,'a') as logFile:
-                    logFile.write('\tCalculated charge for molecule: '+str(charge)+'\n')
+                printMessage(logPath,'\tCalculated charge for molecule: '+str(charge)+'\n')
             else:
-                with open(logPath,'a') as logFile:
-                    logFile.write('\tUsing provided charge for molecule: '+str(charge)+'\n')
+                printMessage(logPath,'\tUsing provided charge for molecule: '+str(charge)+'\n')
         # Use job folder name as job name
         name=os.path.basename(os.path.normpath(jobFolder))
         # Generate NWChem input script
@@ -268,15 +270,13 @@ def generateSP(identifier,jobFolder,np,configFile,logPath,
 
     # Combine fragment sigma profiles, if needed
     if nFragments > 1:
-        with open(logPath,'a') as logFile:
-            logFile.write(f'\nCombining fragments for compound SMILES string: {smilesString}')
+        printMessage(logPath,f'\nCombining fragments for compound SMILES string: {smilesString}')
         spPath=os.path.join(baseJobFolder,f'sigmaProfile.csv')
         sigma,combSP=combineFragmentSPs(baseJobFolder,nFragments,sigmaBins)
         numpy.savetxt(spPath,numpy.column_stack((sigma,combSP)),
                                 delimiter=',')
     else:
-        with open(logPath,'a') as logFile:
-            logFile.write(f'\nCopying files for unfragmented molecule SMILES string: {smilesString}')
+        printMessage(logPath,f'\nCopying files for unfragmented molecule SMILES string: {smilesString}')
         # no combination required, copy files as they are
         sourcePaths=[]
         targetPaths=[]
@@ -512,8 +512,7 @@ def getSigmaMatrix(segmentCoordinates,segmentCharges,segmentAreas,surfaceArea,se
         sigmaMatrix[n,6]=segAtoms[n]
         # if NaN is encountered, raise error
         if numpy.isnan(sigmaMatrix[n,:]).any():
-            with open(logPath,'a') as logFile:
-                logFile.write(f'\nNaN value encountered in sigma matrix, segment number {n+1}...')
+            printMessage(logPath,f'\nNaN value encountered in sigma matrix, segment number {n+1}...')
             raise ValueError('NaN value encountered in sigma matrix...')
     # Check that the total area calculated by NWChem matches
     # the sum of the areas of the segments
@@ -851,3 +850,26 @@ def extractFinalEnergy(output_summary_file):
             else: final_energy = float(line[2].replace('D', 'E'))
 
         return final_energy
+
+def printMessage(logPath, message):
+    """
+    prints a provided message to the screen and to the logfile.
+
+    Arguments
+    ---------
+    logPath : string
+        Path to the log file.
+    message : string
+        Message to be printed/saved.
+
+    Returns
+    -------
+    None.
+    """
+    print(message)
+    try:
+        with open(logPath,'a') as logFile:
+            logFile.write(message)
+    except FileNotFoundError:
+        pass
+        
