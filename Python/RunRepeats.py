@@ -92,10 +92,10 @@ def call_generateSP(entry,configFile):
     errorOcurred=0
     # Get initial xyz
     initialXYZ_=initialXYZ
-    # if initialXYZ_ is provided, convert relative to absolute path:
-    if initialXYZ_ not in [None, 'Random']:
-        if not os.path.isabs(initialXYZ_):
-            initialXYZ_ = os.path.abspath(initialXYZ_)
+    # # if initialXYZ_ is provided, convert relative to absolute path:
+    # if initialXYZ_ not in [None, 'Random']:
+    #     if not os.path.isabs(initialXYZ_):
+    #         initialXYZ_ = os.path.abspath(initialXYZ_)
     try:
         warning=sp.generateSP(entry[1],jobFolder,np_NWChem,configFile,logPath,
                               identifierType=identifierType,
@@ -325,7 +325,7 @@ def parseUserArgs(userArgs):
         initialXYZ='Random'
         useRandomGeometry=True
     else:
-        initialXYZ=userArgs.initialxyz
+        initialXYZ=os.path.abspath(userArgs.initialxyz)
         useRandomGeometry=False
 
     # Specify full job name
