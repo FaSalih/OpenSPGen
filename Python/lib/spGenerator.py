@@ -209,7 +209,7 @@ def generateSP(identifier,jobFolder,np,configFile,logPath,
         name=os.path.basename(os.path.normpath(jobFolder))
         # Generate NWChem input script
         inputPath=os.path.join(jobFolder,'input.nw')
-        nwc.buildInputFile(inputPath,configFile,xyzPath,name,charge)
+        nwc.buildInputFile(inputPath,configFile,xyzPath,name,charge,mol=molecule)
         # Run NWChem
         nwc.runNWChem(inputPath,jobFolder,np)
         # Check that nwchem job converged

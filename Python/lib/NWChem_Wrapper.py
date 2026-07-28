@@ -42,7 +42,7 @@ from rdkit.Chem import GetPeriodicTable
 # Main Functions
 # =============================================================================
 
-def buildInputFile(inputPath,configPath,xyzPath,name,charge):
+def buildInputFile(inputPath,configPath,xyzPath,name,charge,mol=None):
     """
     buildInputFile() builds an NWChem input file based on the inputs provided
     by the user and the .config file present in lib/_config.
@@ -60,6 +60,9 @@ def buildInputFile(inputPath,configPath,xyzPath,name,charge):
         Name of the molecule/job.
     charge : int
         Total charge of the molecule.
+    mol : rdkit.Chem.rdchem.Mol object
+        Molecule object of interest with the conformer embedded. For optional
+        higher accuracy multiplicity calculation.
 
     Returns
     -------
@@ -85,7 +88,7 @@ def buildInputFile(inputPath,configPath,xyzPath,name,charge):
         # Copy configuration file
         copyConfig(inputFile,configPath)
     # replace multiplicity in config
-    subsMinMultiplicity(inputPath,charge)
+    subsMinMultiplicity(inputPath,charge,mol=mol)
     # Output
     return None
         
@@ -545,7 +548,7 @@ def findNextOccurrence(file,fragment):
     # Output
     return lineSplit
 
-def subsMinMultiplicity(inputPath,charge):
+def subsMinMultiplicity(inputPath,charge,mol=None):
     """
     Calculates the minimum valid multiplicity (1 for even e-, 2 for odd e-)
     from the atomic weights of the atoms in teh xyz file and replaces it in
@@ -557,44 +560,58 @@ def subsMinMultiplicity(inputPath,charge):
         Path to NWChem input file.
     charge : int
         The net charge of the system.
+    mol : rdkit.Chem.rdchem.Mol object
+        Molecule object of interest with the conformer embedded. For optional
+        higher accuracy multiplicity calculation.
 
     Returns
     -------
     None
     """
-    # Get RDKit's periodic table instance to look up atomic numbers
-    periodic_table = GetPeriodicTable()
-    total_electrons = 0
+    # If SMILES is provided, calculate multiplicity
+    if mol is not None:
+        unpaired_electrons = sum([atom.GetNumRadicalElectrons() for atom in mol.GetAtoms()])
+        mult_numeric = unpaired_electrons + 1
+        mult_dict = {
+            1:'SINGLET',    2:'DOUBLET',    3:'TRIPLET',    4:'QUARTET',
+            5:'QUINTET',    6:'SEXTET',     7:'SEPTET',     8:'OCTET',     
+        }
+        mult = mult_dict[mult_numeric]
+    # if no molecular structure is known, calculate minimum multiplicity
+    else:
+        # Get RDKit's periodic table instance to look up atomic numbers
+        periodic_table = GetPeriodicTable()
+        total_electrons = 0
 
-    jobFolder=os.path.dirname(inputPath)
-    xyzPath = os.path.join(jobFolder, "initialGeometry.xyz")
-    with open(xyzPath, 'r') as file:
-        lines = file.readlines()
-        
-    # Standard XYZ files contain the atom count on line 1, 
-    # a comment on line 2, and geometry coordinates starting on line 3.
-    atom_lines = lines[2:]
-    
-    for line in atom_lines:
-        tokens = line.strip().split()
-        if not tokens:
-            continue  # Skip trailing empty lines
+        jobFolder=os.path.dirname(inputPath)
+        xyzPath = os.path.join(jobFolder, "initialGeometry.xyz")
+        with open(xyzPath, 'r') as file:
+            lines = file.readlines()
             
-        # The first token in a coordinate line is the atomic symbol (e.g., 'Fe', 'C')
-        symbol = tokens[0].capitalize()
+        # Standard XYZ files contain the atom count on line 1, 
+        # a comment on line 2, and geometry coordinates starting on line 3.
+        atom_lines = lines[2:]
         
-        try:
-            # GetAtomicNumber('Fe') -> 26
-            atomic_number = periodic_table.GetAtomicNumber(symbol)
-            total_electrons += atomic_number
-        except RuntimeError:
-            raise ValueError(f"Atom symbol '{symbol}' is not recognized by RDKit.")
+        for line in atom_lines:
+            tokens = line.strip().split()
+            if not tokens:
+                continue  # Skip trailing empty lines
+                
+            # The first token in a coordinate line is the atomic symbol (e.g., 'Fe', 'C')
+            symbol = tokens[0].capitalize()
+            
+            try:
+                # GetAtomicNumber('Fe') -> 26
+                atomic_number = periodic_table.GetAtomicNumber(symbol)
+                total_electrons += atomic_number
+            except RuntimeError:
+                raise ValueError(f"Atom symbol '{symbol}' is not recognized by RDKit.")
 
-    # Adjust electron count based on the ionic net charge
-    total_electrons -= float(charge)
+        # Adjust electron count based on the ionic net charge
+        total_electrons -= float(charge)
 
-    # Even electrons -> Singlet (1), Odd electrons -> Doublet (2)
-    mult = "singlet" if total_electrons % 2 == 0 else "doublet"
+        # Even electrons -> Singlet (1), Odd electrons -> Doublet (2)
+        mult = "singlet" if total_electrons % 2 == 0 else "doublet"
 
     # replace multiplicity placeholder in input file
     with open(inputPath, "r", encoding="utf-8") as file:
