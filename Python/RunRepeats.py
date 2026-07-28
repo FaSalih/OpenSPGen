@@ -364,7 +364,7 @@ def parseUserArgs(userArgs):
             preOptimize=True  
 
     elif useRandomGeometry:
-        print(f'\n\tUsing random initial geometry with random seed/s: {randomSeeds}.')
+        printMessage(logPath,f'\n\tUsing random initial geometry with random seed/s: {randomSeeds}.')
         if userArgs.id is None:
             printMessage(logPath,'\n\tInput error:'\
                             + f'\t\tRandom initial geometry requires providing an "--id" argument with a SMILES, CAS-Number, InChI, or InChIKey identifier.')
