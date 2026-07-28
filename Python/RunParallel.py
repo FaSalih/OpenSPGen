@@ -184,6 +184,28 @@ def printLogHeader(logPath):
     # Output
     return None
 
+def printMessage(logPath, message):
+    """
+    prints a provided message to the screen and to the logfile.
+
+    Arguments
+    ---------
+    logPath : string
+        Path to the log file.
+    message : string
+        Message to be printed/saved.
+
+    Returns
+    -------
+    None.
+    """
+    print(message)
+    try:
+        with open(logPath,'a') as logFile:
+            logFile.write(message)
+    except FileNotFoundError:
+        pass
+        
 def parseUserArgs(userArgs):
     """
     parseUserArgs() parses the user arguments, checks input validity, and defines variables from user input.
@@ -233,7 +255,12 @@ def parseUserArgs(userArgs):
         if userArgs.idtype.lower() not in ['smiles', 'cas-number', 'inchi', 'inchikey', 'mol2', 'xyz']:
             # Terminate with an error
             print(f'\n\tInput error:')
-            print(f'\n\t\tThe value provided for the "--idtype" argument is invalid. Please provide one of the following options: SMILES, CAS-Number, InChI, InChIKey, mol2, or xyz.')
+            print(f'\t\tThe value provided for the "--idtype" argument is invalid. Please provide one of the following options: SMILES, CAS-Number, InChI, InChIKey, mol2, or xyz.')
+            sys.exit(1)
+        if userArgs.idtype.lower() == 'xyz' and userArgs.charge is None:
+            # Terminate with an error
+            print(f'\n\tInput error:')
+            print(f'\t\tThe value provided for the "--charge" argument is invalid. For an --idtype of xyz, a charge must be provided using the --charge flag.')
             sys.exit(1)
 
     # Set job_name_tail
@@ -245,7 +272,7 @@ def parseUserArgs(userArgs):
         if int(nslots)<1:
             # Terminate with an error
             print(f'\n\tInput error:')
-            print(f'\n\t\tThe value provided for the "--nslots" argument is invalid. Please provide a positive integer.')
+            print(f'\t\tThe value provided for the "--nslots" argument is invalid. Please provide a positive integer.')
             sys.exit(1)
     else:
         nslots=default_options['nslots']
@@ -264,7 +291,7 @@ def parseUserArgs(userArgs):
         if noautoz.lower() not in ['true', 'false']:
             # Terminate with an error
             print(f'\n\tInput error:')
-            print(f'\n\t\tThe value provided for the "--noautoz" argument is invalid. Please provide either "True" or "False".')
+            print(f'\t\tThe value provided for the "--noautoz" argument is invalid. Please provide either "True" or "False".')
             sys.exit(1)
     else:
         noautoz=default_options['noautoz']
@@ -274,7 +301,7 @@ def parseUserArgs(userArgs):
         if iodine.lower() not in ['true', 'false']:
             # Terminate with an error
             print(f'\n\tInput error:')
-            print(f'\n\t\tThe value provided for the "--iodine" argument is invalid. Please provide either "True" or "False".')
+            print(f'\t\tThe value provided for the "--iodine" argument is invalid. Please provide either "True" or "False".')
             sys.exit(1)
         else:
             iodine = True if iodine.lower()=='true' else False
@@ -295,7 +322,7 @@ def parseUserArgs(userArgs):
         initialXYZ='Random'
         useRandomGeometry=True
     else:
-        initialXYZ=userArgs.initialxyz
+        initialXYZ=os.path.abspath(userArgs.initialxyz)
         useRandomGeometry=False
 
     # Specify full job name
@@ -318,30 +345,26 @@ def parseUserArgs(userArgs):
     logPath=os.path.join(mainFolder,f'job_conf_{confid}.log')
     
     # Process user arguments and replace with defaults if not provided
-    with open(logPath,'a') as logFile:  
-        logFile.write('\nProcessing user arguments...')
+    printMessage(logPath,'\nProcessing user arguments...')
 
     # Check validity of input geometry and identifier options
     if userArgs.idtype.lower()=="mol2":
-        with open(logPath,'a') as logFile:
-            logFile.write(f'\n\tUsing provided initial geometry in mol2 file: {userArgs.id}')
-        identifierType=userArgs.idtype
-        identifier=userArgs.id
+        printMessage(logPath,f'\n\tUsing provided initial geometry in mol2 file: {userArgs.id}')
+        identifierType=userArgs.idtype  # "MOL2"
+        identifier=userArgs.id          # path to MOL2 file
         # Check if pre-optimization is desired
         if userArgs.preoptimize is not None:
-            with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry is set by the user to: {userArgs.preoptimize}')
+            printMessage(logPath,f'\n\tPre-optimizaion using MMFF of provided geometry is set by the user to: {userArgs.preoptimize}')
             preOptimize=userArgs.preoptimize
         else:
-            with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry was not set. Default for a mol2 input file is: True')
+            printMessage(logPath,f'\n\tPre-optimizaion using MMFF of provided geometry was not set. Default for a mol2 input file is: True')
             preOptimize=True
+
     elif useRandomGeometry:
-        print(f'\n\tUsing random initial geometry with random seed: {randomSeed}.')
+        printMessage(f'\n\tUsing random initial geometry with random seed: {randomSeed}.')
         if userArgs.id is None:
-            with open(logPath,'a') as logFile:
-                logFile.write('\n\tInput error:')
-                logFile.write(f'\n\t\tRandom initial geometry requires providing an "--id" argument with a SMILES, CAS-Number, InChI, or InChIKey identifier.')
+            printMessage(logPath,'\n\tInput error:'\
+                            + f'\t\tRandom initial geometry requires providing an "--id" argument with a SMILES, CAS-Number, InChI, or InChIKey identifier.')
             sys.exit(1)
 
         with open(logPath,'a') as logFile:
@@ -349,50 +372,44 @@ def parseUserArgs(userArgs):
         preOptimize=True
         identifierType=userArgs.idtype if userArgs.idtype is not None else default_options['idtype']
         identifier=userArgs.id
-    else:
-        with open(logPath,'a') as logFile:
-            logFile.write(f'\n\tUsing provided initial xyz file: {initialXYZ}')
-
-        if userArgs.preoptimize is not None:
-            with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry is set by the user to: {userArgs.preoptimize}.')
-            preOptimize=userArgs.preoptimize
-        else:
-            with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tPre-optimizaion using MMFF of provided geometry was not set. Default is: {default_options["preoptimize"]}')
-            preOptimize=default_options['preoptimize']
-
+    else: #initial XYZ is provided
+        printMessage(logPath,f'\n\tUsing provided initial xyz file: {initialXYZ}')
         if userArgs.id is None:
-            with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tNo identifier provided. Either an identifier or charge are needed for the supplied initial xyz geometry.')
+            printMessage(logPath,f'\n\tNo identifier provided. Either an identifier or charge are needed for the supplied initial xyz geometry.')
             # Check if charge is provided
             if charge is None:
-                with open(logPath,'a') as logFile:
-                    logFile.write(f'\n\tNo identifier or charge are needed for the supplied initial xyz geometry.')
-                    logFile.write('\n\tInput error:')
-                    logFile.write(f'\n\t\tUsing a provided initial xyz geometry requires providing either a charge through the "--charge" argument '\
-                                  + 'or an "--id" argument with a SMILES, CAS-Number, InChI, or InChIKey identifier to allow calculating charge.')
+                printMessage(logPath,'\n\tInput error:'\
+                                + f'\t\tUsing a provided initial xyz geometry requires providing either a charge through the "--charge" argument '\
+                                + 'or an "--id" argument with a SMILES, CAS-Number, InChI, or InChIKey identifier to allow calculating charge.')
                 sys.exit(1)
-            identifierType=default_options['idtype']
-            identifier=default_options['id']
+            # identifierType=default_options['idtype']
+            # identifier=default_options['id']
+            else: # charge is provided, hence identifier is not needed
+                identifierType="XYZ"    # meaning xyz file only is needed, since charge is known
+                identifier="Placeholder"# path to xyz file is provided in "initialXYZ"
         else:
-            with open(logPath,'a') as logFile:
-                logFile.write(f'\n\tIdentifier information is provided but is not needed.')
-            identifierType=userArgs.idtype
-            identifier=userArgs.id
+            if charge is not None:
+                printMessage(logPath,f'\n\tIdentifier information is provided but ignored. Provided charge ({charge}) is used.')
+                identifierType="XYZ"    # meaning xyz file only is needed, since charge is known
+                identifier="Placeholder"# path to xyz file is provided in "initialXYZ"
+            else: # charge is not provided, but identifier is available
+                printMessage(logPath,f'\n\tIdentifier information will be used to calculate charge.')
+                identifierType=userArgs.idtype
+                identifier=userArgs.id
+        # add placeholder value for "preoptimize" boolean
+        preOptimize=None
 
     # Create log file
-    with open(logPath,'a') as logFile:
-        logFile.write('\n\nInitializing serial task...\n')
-        logFile.write('\tMain folder: '+mainFolder+'\n')
-        # logFile.write('\tMolecule list: '+identifierListPath+'\n')
-        logFile.write('\tNumber of threads per job: '+str(np_NWChem)+'\n')
-        logFile.write('\tNWChem configuration file: '+nwchemConfig+'\n')
-        logFile.write('\tDo COSMO: '+str(doCOSMO)+'\n')
-        if doCOSMO:
-            logFile.write('\tAveraging radius: '+str(avgRadius)+'\n')
-            logFile.write('\tSigma bins: '+str(sigmaBins)+'\n')
-        logFile.write('Initialization complete.\n')
+    printMessage(logPath,f'\n\nInitializing parallel task for conformer {confid}...\n'\
+            +'\tMain folder: '+mainFolder+'\n'\
+            # +'\tMolecule list: '+identifierListPath+'\n'\
+            +'\tNumber of threads per job: '+str(np_NWChem)+'\n'\
+            +'\tNWChem configuration file: '+nwchemConfig+'\n'\
+            +'\tDo COSMO: '+str(doCOSMO)+'\n')
+    if doCOSMO:
+        printMessage(logPath,'\tAveraging radius: '+str(avgRadius)+'\n'\
+            +'\tSigma bins: '+str(sigmaBins)+'\n')
+    printMessage(logPath,'Initialization complete.\n')
 
     # return user-defined variables
     return (
