@@ -12,9 +12,9 @@ Script structure:
     . Dataset Combination Loop
 
 Usage:
-    python CombineRandSPs.py <number_of_confs> 
+    python CombineRandSPs.py <number_of_confs> <SP_jobs_folder> <Combined_SPs_save_folder> <averaging_scheme>
 
-Last edit: 2026-06-23
+Last edit: 2026-10-08
 Author: Fathya Salih
 """
 
@@ -38,7 +38,7 @@ from lib import spGenerator as spg
 # Configuration
 # =============================================================================
 if len(sys.argv) < 2:
-    print("Error: Missing arguments. Usage: CombineRandSPs.py <number_of_confs>")
+    print("Error: Missing required argument <number_of_confs>. \nUsage: python CombineRandSPs.py <number_of_confs> <SP_jobs_folder> <Combined_SPs_save_folder> <averaging_scheme>")
     exit(1)
 else:
     try:
@@ -49,15 +49,26 @@ else:
 
 # define number of conformer jobs to average over and the averaging scheme
 n_confs = int(sys.argv[1])
-avg_scheme = 'arithmetic' # allows: 'arithmetic' or 'boltzmann'
+main_folder = sys.argv[2] if len(sys.argv) >= 3 else '.'
+save_folder = sys.argv[3] if len(sys.argv) >= 4 else main_folder
+avg_scheme = sys.argv[4].lower() if len(sys.argv) >= 4 else 'arithmetic' # allows: 'arithmetic' or 'boltzmann'
+
+if avg_scheme not in ['arithmetic', 'boltzmann']: 
+    print(f"Error: Incorrect argument value for averaging scheme. The allowed schemes are 'arithmetic' or 'boltzmann'. Received: {sys.argv[4]}")
+    exit(1)
 
 # get all job folders existing in working directory
-pattern = os.path.join('.', "SP-RandInitXYZ-Mol*")
+pattern = os.path.join(main_folder, "SP-RandInitXYZ-Mol*")
+# pattern = os.path.join(main_folder, "SP-NoInitXYZ-Mol*") # old output format
 all_dirs = glob.glob(pattern)
 
 # read a sample folder to get charge range (array sizes)
-sample_dir = f'{all_dirs[0]}/{all_dirs[0]}_0'
-sample_SP = pd.read_csv(f'{sample_dir}/sigmaProfile.csv', header=None).to_numpy().astype(float)
+for i in range(len(all_dirs)):
+    try:
+        sample_dir = f'{all_dirs[i]}/{all_dirs[i]}_0'
+        sample_SP = pd.read_csv(f'{sample_dir}/sigmaProfile.csv', header=None).to_numpy().astype(float)
+        break
+    except FileNotFoundError: pass 
 sigma = sample_SP[:,0]
 n_bins = len(sigma)
 n_mols = len(all_dirs)
@@ -131,12 +142,12 @@ std_df.index.name = 'Index'
 
 # save to csvs
 if avg_scheme == 'arithmetic': 
-    means_path = f"sp_gen_{n_confs}SPs.csv"
-    stds_path = f"sp_gen_{n_confs}SPs_std.csv"
+    means_path = f"{save_folder}/sp_gen_{n_confs}SPs.csv"
+    stds_path = f"{save_folder}/sp_gen_{n_confs}SPs_std.csv"
     
 if avg_scheme == 'boltzmann': 
-    means_path = f"sp_gen_ba_{n_confs}SPs.csv"
-    stds_path = f"sp_gen_ba_{n_confs}SPs_std.csv"
+    means_path = f"{save_folder}/sp_gen_ba_{n_confs}SPs.csv"
+    stds_path = f"{save_folder}/sp_gen_ba_{n_confs}SPs_std.csv"
 
 means_df.to_csv(means_path, index=True)
 std_df.to_csv(stds_path, index=True)
