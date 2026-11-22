@@ -29,6 +29,7 @@ import copy
 
 # Specific
 import numpy as np
+import pubchempy as pcp
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import rdForceFieldHelpers as rdff
@@ -81,21 +82,31 @@ def generateConformer(smilesString,xyzPath=None,calc_energy=False):
     mList=[]
     for n in range(3): # Generate 3 independent conformers
         # Build molecule object with initial 3D coordinates
-        molecule=getInitialConformer(smilesString,randomSeed=n)
-        # Skip procedure if number of atoms is inferior to 5
-        if molecule.GetNumAtoms()<5:
-            if xyzPath is not None: Chem.MolToXYZFile(molecule,xyzPath)
-            return molecule
-        # Generate standard MMFF
-        prop,ff=generateCustomMMFF(molecule)    
-        # Relax molecule under standard MMFF
-        ff.Minimize(10**6)
+        try:
+            molecule=getInitialConformer(smilesString,randomSeed=n)
+            # Skip procedure if number of atoms is inferior to 5
+            if molecule.GetNumAtoms()<5:
+                if xyzPath is not None: Chem.MolToXYZFile(molecule,xyzPath)
+                return molecule
+            # Generate standard MMFF
+            prop,ff=generateCustomMMFF(molecule)    
+            # Relax molecule under standard MMFF
+            ff.Minimize(10**6)
+            # Calculate conformer energy
+            molEnergy=ff.CalcEnergy()
+        except ValueError as e:
+            if "Bad Conformer Id" in str(e):
+                molecule=retrieveConformer(smilesString)
+                molEnergy=1e3   # Placeholder of high energy since MMFF is not 
+                                # defined for molecule at hand
+            else:
+                raise ValueError(e)
         # Recenter molecule coordinates
         Chem.rdMolTransforms.CanonicalizeMol(molecule)
         # Append conformer to list of conformers
         mList.append(copy.deepcopy(molecule))
         # Evaluate energy of the conformer and append 
-        energies.append(ff.CalcEnergy())
+        energies.append(molEnergy)
     # Retrieve conformer with the lowest energy
     molecule=mList[np.argmin(energies)]
     # Calculate SASA for selected molecule
@@ -207,3 +218,36 @@ def generateCustomMMFF(molecule):
     # Output
     return prop,ff
     
+def retrieveConformer(smilesString):
+    """
+    Retrieves molecular structure from PubChem in case MMFF does not have
+    the parameters to optimize the geometry of the molecule at hand.
+
+    Parameters
+    ----------
+    smilesString : string
+        SMILES string of the molecule of interest.
+
+    Returns
+    -------
+    molecule : rdkit.Chem.rdchem.Mol object
+        Molecule object of interest with the conformer embedded.
+    """
+    try:
+        # Fetch the raw SDF string directly from PubChem using SMILES
+        sdf_data = pcp.get_sdf(smilesString, namespace="smiles", record_type='3d')
+    except pcp.PubChemHTTPError as e:
+        raise Exception(f"PubChem API error: {e}")
+
+    if not sdf_data:
+        raise Exception(f"No structure found in PubChem for SMILES: {smilesString}")
+
+    # Parse the SDF block into an RDKit Mol object
+    # removeHs=False preserves explicit hydrogens (essential for 3D coordinates)
+    mol = Chem.MolFromMolBlock(sdf_data, removeHs=False)
+
+    if mol is None:
+        raise Exception(f"RDKit failed to parse the retrieved SDF data for SMILES: {smilesString}")
+        return None
+
+    return mol
